@@ -1,0 +1,80 @@
+# MVP class list — index order must match YOLO training labels.
+# COCO-pretrained bootstrap maps a subset via coco_name.
+
+classes:
+  - id: 0
+    name: car
+    coco_name: car
+    model: A
+  - id: 1
+    name: bus
+    coco_name: bus
+    model: A
+  - id: 2
+    name: truck
+    coco_name: truck
+    model: A
+  - id: 3
+    name: motorcycle
+    coco_name: motorcycle
+    model: A
+  - id: 4
+    name: person
+    coco_name: person
+    model: A
+  - id: 5
+    name: trash_container
+    coco_name: null
+    model: A
+  - id: 6
+    name: overflowing_container
+    coco_name: null
+    model: B
+  - id: 7
+    name: street_waste
+    coco_name: null
+    model: B
+  - id: 8
+    name: pothole
+    coco_name: null
+    model: B
+  - id: 9
+    name: road_crack
+    coco_name: null
+    model: B
+  - id: 10
+    name: road_damage
+    coco_name: null
+    model: B
+  - id: 11
+    name: bus_stop
+    coco_name: null
+    model: A
+  - id: 12
+    name: traffic_sign
+    coco_name: stop sign  # closest COCO proxy; replace after fine-tune
+    model: A
+
+# When running a COCO checkpoint, only classes with coco_name are emitted.
+bootstrap_coco_only: true
+
+# External detector labels → City Vision taxonomy (null = drop).
+# Used for RDD / HF road-distress checkpoints whose native names differ.
+# Matching is case-insensitive; underscores/spaces/hyphens are normalized.
+label_aliases:
+  # vinothvikas1987/pothole-detection-yolov8 (YOLOv8s, Apache-2.0)
+  Longitudinal Crack: road_crack
+  Transverse Crack: road_crack
+  Alligator Crack: road_damage
+  Pothole: pothole
+  Other: null
+  # Classic RDD2022 codes
+  D00: road_crack
+  D10: road_crack
+  D20: road_damage
+  D40: pothole
+  Repair: null
+  # Common variants
+  longitudinal_crack: road_crack
+  transverse_crack: road_crack
+  alligator_crack: road_damage

@@ -1,0 +1,6 @@
+path: data/datasets/model_b_road
+train: images/train
+val: images/val
+
+names:
+  0: pothole

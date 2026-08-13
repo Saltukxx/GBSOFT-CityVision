@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+src/*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Data & models (keep structure, not binaries)
+data/raw/**
+data/processed/**
+data/annotations/**
+data/samples/**
+!data/**/.gitkeep
+outputs/**
+!outputs/.gitkeep
+*.pt
+*.onnx
+*.engine
+!models/.gitkeep
+runs/
+data/datasets/model_b/images/**/*
+data/datasets/model_b/labels/**/*
+!data/datasets/model_b/**/.gitkeep
+!data/datasets/model_b/README.md
+data/datasets/model_b_road/
+data/datasets/model_b_waste/
+data/raw/rdd2022/
+data/raw/roadeye_hf/
+*.mp4
+*.avi
+*.mov
+*.mkv
+!data/samples/README.md
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Docker
+*.log
+
+# Upstream CVAT clone (local only)
+tools/cvat/
+
+# Local object store (evidence copies)
+data/object_store/

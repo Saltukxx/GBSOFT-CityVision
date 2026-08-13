@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GBSoft City Vision — Operatör</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a222c;
+      --text: #e8eef4;
+      --muted: #8b9aab;
+      --accent: #3d9cf0;
+      --ok: #3ecf8e;
+      --warn: #f0b429;
+      --bad: #e85d5d;
+      --line: #2a3542;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1c2a3a 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    header span { color: var(--muted); font-size: 0.85rem; }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+    }
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 0.85rem 1rem;
+    }
+    .kpi .label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
+    .kpi .value { font-size: 1.6rem; margin-top: 0.25rem; font-variant-numeric: tabular-nums; }
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 1rem;
+      padding: 0 1.25rem 1.25rem;
+      min-height: 62vh;
+    }
+    #map {
+      height: 62vh;
+      border: 1px solid var(--line);
+      background: #121820;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      max-height: 62vh;
+    }
+    .panel h2 {
+      margin: 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .filters {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    select, button {
+      background: #243040;
+      color: var(--text);
+      border: 1px solid var(--line);
+      padding: 0.35rem 0.6rem;
+      font: inherit;
+      cursor: pointer;
+    }
+    button.primary { background: var(--accent); border-color: transparent; color: #061018; font-weight: 600; }
+    button.ghost { background: transparent; }
+    .list { overflow: auto; flex: 1; }
+    .row {
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+    }
+    .row:hover, .row.active { background: #243040; }
+    .row .meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
+    .band-auto_accept { color: var(--ok); }
+    .band-manual_review { color: var(--warn); }
+    .band-auto_reject { color: var(--bad); }
+    .detail {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--line);
+      font-size: 0.85rem;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+    @media (max-width: 900px) {
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .layout { grid-template-columns: 1fr; }
+      #map, .panel { max-height: none; height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GBSoft City Vision</h1>
+    <span id="health">bağlanıyor…</span>
+  </header>
+  <section class="kpis" id="kpis"></section>
+  <section class="layout">
+    <div id="map"></div>
+    <div class="panel">
+      <h2>Olay kuyruğu</h2>
+      <div class="filters">
+        <select id="statusFilter">
+          <option value="">Tüm status</option>
+          <option value="under_review">under_review</option>
+          <option value="confirmed">confirmed</option>
+          <option value="false_positive">false_positive</option>
+          <option value="work_order_created">work_order_created</option>
+        </select>
+        <select id="typeFilter">
+          <option value="">Tüm tip</option>
+          <option value="pothole">pothole</option>
+          <option value="overflowing_container">overflowing_container</option>
+          <option value="street_waste">street_waste</option>
+          <option value="bus_stop_obstruction">bus_stop_obstruction</option>
+          <option value="traffic_congestion">traffic_congestion</option>
+        </select>
+        <button class="ghost" id="reload">Yenile</button>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="detail" id="detail">Bir olay seçin.</div>
+    </div>
+  </section>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([39.90, 41.27], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap",
+    }).addTo(map);
+    const layer = L.layerGroup().addTo(map);
+    const zoneLayer = L.layerGroup().addTo(map);
+    let events = [];
+    let selected = null;
+    let zonesLoaded = false;
+
+    async function j(url, opts) {
+      const r = await fetch(url, opts);
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+
+    async function loadHealth() {
+      try {
+        const h = await j("/health");
+        document.getElementById("health").textContent =
+          h.status === "ok" ? "PostgreSQL + PostGIS hazır" : "DB sorunlu";
+      } catch (e) {
+        document.getElementById("health").textContent = "API / DB yok";
+      }
+    }
+
+    async function loadKpis() {
+      const k = await j("/api/kpis");
+      let zoneCount = 0;
+      try {
+        const zs = await j("/api/zones");
+        zoneCount = zs.length;
+      } catch (_) {}
+      const today = k.today_by_type || {};
+      const todayBits = Object.entries(today).slice(0, 4).map(([t,c]) => `${t}:${c}`).join(" · ") || "—";
+      document.getElementById("kpis").innerHTML = `
+        <div class="kpi"><div class="label">Bugün</div><div class="value">${k.today_total ?? 0}</div><div class="meta" style="color:var(--muted);font-size:0.75rem;margin-top:0.25rem">${todayBits}</div></div>
+        <div class="kpi"><div class="label">İnceleme</div><div class="value">${k.review_queue}</div></div>
+        <div class="kpi"><div class="label">Açık iş emri</div><div class="value">${k.open_work_orders ?? 0}</div></div>
+        <div class="kpi"><div class="label">Zone / toplam</div><div class="value" style="font-size:1.1rem">${zoneCount} / ${k.events_total}</div></div>
+      `;
+    }
+
+    async function loadZones() {
+      try {
+        const fc = await j("/api/zones.geojson");
+        zoneLayer.clearLayers();
+        if (!fc.features || !fc.features.length) return;
+        const gj = L.geoJSON(fc, {
+          style: { color: "#3ecf8e", weight: 2, fillOpacity: 0.15 },
+          onEachFeature: (f, l) => {
+            const p = f.properties || {};
+            l.bindPopup(`${p.name || p.zone_id}<br>${p.type || ""}`);
+          },
+        });
+        zoneLayer.addLayer(gj);
+        zonesLoaded = true;
+      } catch (_) {}
+    }
+
+    function renderList() {
+      const el = document.getElementById("list");
+      el.innerHTML = events.map((e) => `
+        <div class="row ${selected && selected.event_id === e.event_id ? "active" : ""}" data-id="${e.event_id}">
+          <div><strong>${e.type || "?"}</strong> · <span class="band-${e.confidence_band || ""}">${e.confidence_band || e.status}</span></div>
+          <div class="meta">${e.event_id} · conf ${(e.confidence ?? 0).toFixed?.(2) || e.confidence} · ${e.status}</div>
+        </div>
+      `).join("") || `<div class="row">Kayıt yok — önce ingest çalıştırın.</div>`;
+      el.querySelectorAll(".row[data-id]").forEach((n) => {
+        n.onclick = () => select(n.dataset.id);
+      });
+    }
+
+    function renderMap() {
+      layer.clearLayers();
+      const pts = events.filter((e) => e.lat != null && e.lon != null);
+      pts.forEach((e) => {
+        const m = L.circleMarker([e.lat, e.lon], {
+          radius: 7,
+          color: e.status === "under_review" ? "#f0b429" : "#3d9cf0",
+          fillOpacity: 0.8,
+        }).bindPopup(`${e.type}<br>${e.event_id}`);
+        m.on("click", () => select(e.event_id));
+        layer.addLayer(m);
+      });
+      if (pts.length) {
+        map.fitBounds(L.latLngBounds(pts.map((e) => [e.lat, e.lon])).pad(0.2));
+      }
+    }
+
+    async function select(id) {
+      selected = events.find((e) => e.event_id === id) || null;
+      renderList();
+      const d = document.getElementById("detail");
+      if (!selected) {
+        d.textContent = "Bir olay seçin.";
+        return;
+      }
+      let mediaHtml = "";
+      try {
+        const media = await j(`/api/events/${selected.event_id}/media`);
+        const imgs = media.filter((m) => (m.media_type === "image" || m.media_type === "crop") && m.url);
+        if (imgs.length) {
+          mediaHtml = `<div style="margin-top:0.5rem">${imgs.map((m) =>
+            `<a href="${m.url}" target="_blank"><img src="${m.url}" alt="" style="max-width:100%;max-height:120px;margin-right:0.35rem;border:1px solid var(--line)"/></a>`
+          ).join("")}</div>`;
+        }
+      } catch (_) {}
+      d.innerHTML = `
+        <div><strong>${selected.event_id}</strong> — ${selected.type}</div>
+        <div class="meta">${selected.lat}, ${selected.lon} · zone ${selected.zone_id || "-"} · obs ${selected.observations || 1}</div>
+        ${mediaHtml}
+        <div class="actions">
+          <button class="primary" data-label="correct">Onayla</button>
+          <button data-label="wrong">Yanlış alarm</button>
+          <button data-label="work_order">İş emri</button>
+          <button data-label="resolved">Çözüldü</button>
+        </div>
+      `;
+      d.querySelectorAll("button").forEach((b) => {
+        b.onclick = async () => {
+          const label = b.dataset.label;
+          let unit = "ops";
+          if (label === "work_order") {
+            unit = prompt("Birim (örn. yol_bakim, temizlik)", "yol_bakim") || "ops";
+          }
+          await j(`/api/events/${selected.event_id}/review`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ label, note: "dashboard", reviewer: "operator", unit }),
+          });
+          await refresh();
+        };
+      });
+    }
+
+    async function refresh() {
+      const st = document.getElementById("statusFilter").value;
+      const tp = document.getElementById("typeFilter").value;
+      const q = new URLSearchParams();
+      if (st) q.set("status", st);
+      if (tp) q.set("type", tp);
+      events = await j("/api/events?" + q.toString());
+      if (selected) selected = events.find((e) => e.event_id === selected.event_id) || selected;
+      renderList();
+      renderMap();
+      if (!zonesLoaded) await loadZones();
+      await loadKpis();
+      if (selected) select(selected.event_id);
+    }
+
+    document.getElementById("reload").onclick = refresh;
+    document.getElementById("statusFilter").onchange = refresh;
+    document.getElementById("typeFilter").onchange = refresh;
+    loadHealth();
+    refresh().catch((e) => {
+      document.getElementById("list").innerHTML = `<div class="row">${e.message}</div>`;
+    });
+  </script>
+</body>
+</html>

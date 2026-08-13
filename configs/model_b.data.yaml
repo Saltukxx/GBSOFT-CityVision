@@ -1,0 +1,14 @@
+# Ultralytics dataset config for Model B (infrastructure).
+# Paths are relative to this file's parent (repo root when launched from scripts/).
+
+path: data/datasets/model_b
+train: images/train
+val: images/val
+
+# Contiguous IDs for Model B only (do not reuse Model A indices here).
+names:
+  0: overflowing_container
+  1: street_waste
+  2: pothole
+  3: road_crack
+  4: road_damage

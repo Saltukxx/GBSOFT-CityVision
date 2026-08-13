@@ -1,0 +1,15 @@
+id: erzurum
+name: Erzurum
+timezone: Europe/Istanbul
+zones: zones.geojson
+props:
+  country: TR
+  pilot: true
+routes:
+  - id: R-17
+    name: Atatürk Cad. hat
+    coordinates:
+      - [41.2700, 39.9170]
+      - [41.2732, 39.9181]
+      - [41.2720, 39.9218]
+      - [41.2719, 39.9220]

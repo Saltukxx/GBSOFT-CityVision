@@ -1,0 +1,123 @@
+video:
+  stride: 1
+  max_frames: null
+
+detection:
+  # Model A: general objects (vehicles, person, signs…)
+  model_a: yolov8n.pt
+  # Model B list — missing files are skipped; appear automatically when exported
+  model_b_list:
+    # RDD road distress (vinothvikas1987/pothole-detection-yolov8) — label_aliases in classes.yaml
+    - models/infra-b-road-rdd.pt
+    - models/infra-b-waste.pt
+  # Keep legacy RoadEye-only pothole weights discoverable but not primary
+  # models/infra-b-road.pt
+  # legacy single field still supported
+  model_b: null
+  # also pick up any models/infra-b-*.pt (legacy RoadEye infra-b-road.pt would double-run)
+  auto_discover_model_b: false
+  # while waste training runs, use latest checkpoint until export finishes
+  model_b_fallbacks:
+    - runs/model_b/train_waste_overflow/weights/best.pt
+  conf: 0.35
+  conf_discard: 0.55   # below → keep as unknown candidate only if keep_low_conf
+  keep_low_conf: false
+  iou: 0.45
+  imgsz: 640
+  device: null
+  min_box_area: 400     # px² filter for noise
+  allowed_classes: null # null = all mapped classes; or list e.g. [car, bus, truck]
+
+tracking:
+  enabled: true
+  tracker: bytetrack.yaml
+
+gps:
+  enabled: true
+  # Sidecar file: CSV with timestamp_ms|iso, lat, lon, speed, heading
+  path: null
+  max_interp_gap_ms: 2000
+
+geofence:
+  enabled: true
+  # GeoJSON FeatureCollection of Polygon zones
+  path: null
+  vehicle_classes: [car, bus, truck, motorcycle]
+  event_type: potential_bus_stop_obstruction
+  min_dwell_frames: 3
+
+traffic:
+  enabled: true
+  # Horizontal count line as ratio of frame height (0–1)
+  line_y_ratio: 0.55
+  vehicle_classes: [car, bus, truck, motorcycle]
+
+events:
+  enabled: true
+  # Classes that become spatial events (not every vehicle frame)
+  event_classes:
+    - pothole
+    - road_crack
+    - road_damage
+    - overflowing_container
+    - street_waste
+  fusion_radius_m: 15
+  fusion_window_hours: 72
+  min_observations: 2
+  # Pixel-space fusion when GPS missing (normalized image coords)
+  fusion_radius_norm: 0.05
+  # Do not emit low-confidence municipal events
+  drop_confidence_bands: [discard]
+  class_min_confidence:
+    pothole: 0.72
+    road_crack: 0.72
+    road_damage: 0.72
+    # Waste stays on, but needs a high bar (cars were FP on highway)
+    overflowing_container: 0.92
+    street_waste: 0.92
+  # Front-camera road surface band (normalized bbox center)
+  road_roi:
+    enabled: true
+    x_min: 0.12
+    x_max: 0.88
+    y_min: 0.42
+    y_max: 0.98
+    apply_to:
+      - pothole
+      - road_crack
+      - road_damage
+      - overflowing_container
+      - street_waste
+
+confidence:
+  bands:
+    discard: 0.70
+    review: 0.85
+    probable: 0.95
+  repeat_bonus: 0.10
+  multi_vehicle_bonus: 0.10
+  gps_bonus: 0.05
+
+evidence:
+  enabled: true
+  seconds_before: 5
+  seconds_after: 5
+  save_full_frame: true
+  save_crop: true
+  save_clips: true
+  max_events: 50
+
+export:
+  write_json: true
+  write_video: true
+  write_report: true
+  json_name: detections.jsonl
+  events_name: events.json
+  traffic_name: traffic.json
+  video_name: annotated.mp4
+  report_name: report.html
+
+run:
+  vehicle_id: BUS-DEMO
+  camera_id: FRONT
+  model_version_tag: bootstrap-0.2.0

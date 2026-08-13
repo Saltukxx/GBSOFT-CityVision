@@ -1,0 +1,76 @@
+services:
+  db:
+    # Multi-arch when available; on Apple Silicon amd64 falls back to emulation.
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64
+    container_name: cityvision-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cityvision
+      POSTGRES_PASSWORD: cityvision
+      POSTGRES_DB: cityvision
+    ports:
+      - "5435:5432"
+    volumes:
+      - cityvision_pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cityvision -d cityvision"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Optional: inference pipeline container (does not start DB-dependent API)
+  pipeline:
+    profiles: ["pipeline"]
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./configs:/app/configs
+      - ./models:/app/models
+
+  api:
+    profiles: ["api"]
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql://cityvision:cityvision@db:5432/cityvision
+      CITYVISION_OBJECT_STORE: /app/data/object_store
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8088:8088"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./outputs:/app/outputs
+      - ./data:/app/data
+
+  redis:
+    profiles: ["redis"]
+    image: redis:7-alpine
+    container_name: cityvision-redis
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  minio:
+    profiles: ["minio"]
+    image: minio/minio:latest
+    container_name: cityvision-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: cityvision
+      MINIO_ROOT_PASSWORD: cityvisionsecret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - cityvision_minio:/data
+    restart: unless-stopped
+
+volumes:
+  cityvision_pgdata:
+  cityvision_minio:

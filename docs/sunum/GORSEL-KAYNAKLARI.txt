@@ -1,0 +1,36 @@
+GBSoft Sunum — Görsel Kaynakları
+(dosya | konu | kaynak / fotoğrafçı | lisans)
+
+— KURUM TARAFINDAN SAĞLANAN (WhatsApp ile iletildi) ——————————————
+road_wide.jpg        | Rögar çevresi çökme + araç  | Kurum içi paylaşım (şikayetvar filigranlı) | Telif üçüncü kişide; yalnızca kurum içi sunum
+obs_road1.jpg        | Yol kenarı kırılması        | aynı
+obs_road2.jpg        | Rögar çevresi çukur         | aynı
+obs_road3.jpg        | Çatlak yayılımı + kapak     | aynı
+tile_road.jpg        | Yol çukuru (kapsam kutusu)  | aynı
+NOT: Bu dört fotoğraf şikayetvar.com filigranı taşır; telifi yükleyen kişiye aittir.
+     Sunum kurum içi kullanım için hazırlanmıştır. Dışa açık / ticari teklif
+     versiyonunda bunları GBSoft'un kendi saha fotoğraflarıyla değiştirin.
+
+— WIKIMEDIA COMMONS (atıf zorunlu) ————————————————————————————
+cover.jpg            | Ali Ravi Caddesi, Erzurum        | Zeynel Cebeci        | CC BY-SA 4.0
+detect.jpg           | Cumhuriyet Caddesi, Erzurum 04   | Zeynel Cebeci        | CC BY-SA 4.0
+divider.jpg          | Cumhuriyet Caddesi, Erzurum      | Zeynel Cebeci        | CC BY-SA 4.0
+traffic.jpg          | Cumhuriyet Cad. İş Merkezi       | Eğitmen Mahmut       | CC BY-SA 3.0
+obs1.jpg             | Cumhuriyet Caddesi, Erzurum 04   | Zeynel Cebeci        | CC BY-SA 4.0
+oltu.jpg             | Oltu taşı heykeli, Oltu          | BySterio            | CC BY-SA 4.0
+kars.jpg             | Kars sokak, 2011                 | Özgür Esen          | CC BY-SA 4.0
+bus.jpg              | AKIA metrobüs, Söğütlüçeşme      | Kayra               | CC BY 4.0
+fleet.jpg            | AKIA metrobüs, İstanbul          | Kayra               | CC BY 4.0
+pothole.jpg          | Levantamiento de piso            | Bzmt-25             | CC BY 4.0
+pothole_close.jpg    | Bache en la escuela              | Nuggyland           | CC BY 4.0
+closing.jpg          | AKIA metrobüs, İstanbul          | Kayra               | CC BY 4.0
+
+— FLICKR ————————————————————————————————————————————————
+waste.jpg            | stack overflow (taşmış konteyner)| nicolasnova         | CC BY 2.0
+
+— KULLANIM NOTLARI ————————————————————————————————————————
+* CC BY-SA görsellerin kırpılmış/işaretlenmiş halleri "türetilmiş eser" sayılır;
+  dışa açık yayımda aynı lisansla paylaşım koşulu doğar. Kurum içi sunumda sorun değil.
+* Sunumda görünen tüm yüzler ve plakalar maskelenmiştir (KVKK / ürün özelliği gösterimi).
+* Ticari teklif versiyonu için önerilen: Oltu ve Kars'ta çekilecek kendi saha fotoğraflarınız
+  + araç üstü kamera kayıtlarından alınmış gerçek tespit kareleri.

@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt pyproject.toml README.md ./
+COPY src ./src
+COPY configs ./configs
+COPY scripts ./scripts
+COPY db ./db
+
+RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -e .
+
+ENV PYTHONPATH=/app/src
+ENV DATABASE_URL=postgresql://cityvision:cityvision@db:5432/cityvision
+
+EXPOSE 8088
+CMD ["python", "scripts/serve_api.py", "--host", "0.0.0.0", "--port", "8088"]

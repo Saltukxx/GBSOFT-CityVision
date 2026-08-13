@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "zone_id": "BUS_STOP_187",
+        "name": "Atatürk Cad. Durak",
+        "type": "bus_stop"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [41.27180, 39.92170],
+            [41.27210, 39.92170],
+            [41.27210, 39.92195],
+            [41.27180, 39.92195],
+            [41.27180, 39.92170]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+GBSoft City Vision — dikey reel seslendirme metni
+Ses dosyası: public/voiceover-tr.mp3 (ElevenLabs, 58.67 sn)
+
+01  Şehirde her gün sayısız belediye aracı aynı sokaklardan geçiyor.
+02  Bu araçlar artık karşılarına çıkan sorunları da görebiliyor.
+03  City Vision yoldaki çukurları, taşan çöp konteynerlerini ve trafiği aksatan araçları tespit ediyor.
+04  Belediyenin mevcut araçlarına yerleştirilen kameralar yolculuk sırasında çevreyi izliyor.
+05  Toplanan görüntüler araç içerisinde analiz ediliyor.
+06  Tespit edilen her sorun konumu ve görüntüsüyle birlikte sisteme kaydediliyor.
+07  Aynı sorun farklı araçlar tarafından yeniden görüldüğünde kayıtlar tek bir olay altında birleştiriliyor.
+08  Bu sayede aynı sorun için birden fazla iş emri oluşturulmuyor.
+09  Belediye ekipleri doğrudan doğru noktaya yönlendiriliyor.
+10  Bunun için yeni bir ekip kurulmasına gerek kalmıyor.
+11  Mevcut araçlar görevlerini sürdürürken şehir de takip ediliyor.
+12  Sorunlar büyümeden tespit ediliyor ve ekipler daha hızlı harekete geçiyor.
+13  GBSoft City Vision şehir yönetimini daha hızlı, daha düzenli ve daha verimli hâle getiriyor.
+
+Cümle başlangıçları (kare, 30 fps) — src/reel/timing.ts ile aynı:
+01: 0     02: 112   03: 222   04: 413   05: 566   06: 670   07: 809
+08: 998   09: 1120  10: 1232  11: 1316  12: 1434  13: 1567  bitiş: 1760
+
+Ses değişirse: sınırları yeniden ölç, timing.ts içindeki VO değerlerini güncelle.
+Sahne süreleri VO'dan otomatik hesaplanır (SCENE_DURATIONS), elle ayarlanmaz.
