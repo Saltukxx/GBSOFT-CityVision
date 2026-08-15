@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 import uuid
 from pathlib import Path
 
@@ -47,7 +46,7 @@ def _register(client: TestClient, device_id: str | None = None) -> str:
     return reg.json()["token"]
 
 
-def test_memphis_heartbeat_and_video_dedupe(store: Store, tmp_path: Path, monkeypatch):
+def test_memphis_heartbeat_and_video_dedupe(store: Store, tmp_path: Path, monkeypatch, wait_for_job):
     monkeypatch.setenv("CITYVISION_RBAC", "0")
     monkeypatch.setenv("CITYVISION_JOB_INLINE", "1")
     monkeypatch.setenv("CITYVISION_OBJECT_STORE", str(tmp_path / "obj"))
@@ -96,12 +95,7 @@ def test_memphis_heartbeat_and_video_dedupe(store: Store, tmp_path: Path, monkey
     assert body["job_id"]
     upload_id = body["upload_id"]
 
-    for _ in range(40):
-        job = store.get_job(int(body["job_id"]))
-        if job and job.get("status") in {"succeeded", "failed"}:
-            break
-        time.sleep(0.05)
-    job = store.get_job(int(body["job_id"]))
+    job = wait_for_job(store, body["job_id"])
     assert job is not None
     assert job["status"] == "succeeded", job
 

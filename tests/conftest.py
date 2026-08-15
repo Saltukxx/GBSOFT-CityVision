@@ -24,6 +24,29 @@ def _isolate_dotenv(monkeypatch):
     yield
 
 
+@pytest.fixture()
+def wait_for_job():
+    """Block until an inline job thread reaches a terminal state.
+
+    Jobs run in a background thread and open their own DB connections, so a
+    tight fixed budget makes these assertions flaky under a loaded suite.
+    This returns as soon as the job settles, so a generous ceiling is free.
+    """
+    import time
+
+    def _wait(store, job_id: int, timeout_s: float = 30.0):
+        deadline = time.monotonic() + timeout_s
+        job = None
+        while time.monotonic() < deadline:
+            job = store.get_job(int(job_id))
+            if job and job.get("status") in {"succeeded", "failed"}:
+                return job
+            time.sleep(0.05)
+        return job
+
+    return _wait
+
+
 @pytest.fixture(autouse=True)
 def _clear_settings_cache():
     from cityvision.settings import get_settings

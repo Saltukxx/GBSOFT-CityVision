@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 import json
-import time
 import zipfile
 from pathlib import Path
 
@@ -57,7 +56,7 @@ def test_zip_slip_blocked(tmp_path: Path):
         safe_extract_zip(evil, tmp_path / "out")
 
 
-def test_edge_register_upload_ingest(store: Store, tmp_path: Path, monkeypatch):
+def test_edge_register_upload_ingest(store: Store, tmp_path: Path, monkeypatch, wait_for_job):
     monkeypatch.setenv("CITYVISION_RBAC", "0")
     monkeypatch.setenv("CITYVISION_EDGE_UPLOAD_DIR", str(tmp_path / "edge_uploads"))
     get_settings.cache_clear()
@@ -120,13 +119,7 @@ def test_edge_register_upload_ingest(store: Store, tmp_path: Path, monkeypatch):
     assert summary.get("city_id") == "erzurum"
     assert summary.get("edge_device_id") == "edge-test-1"
 
-    # Wait briefly for in-process job thread
-    for _ in range(40):
-        job = store.get_job(int(body["job_id"]))
-        if job and job.get("status") in {"succeeded", "failed"}:
-            break
-        time.sleep(0.1)
-    job = store.get_job(int(body["job_id"]))
+    job = wait_for_job(store, body["job_id"])
     assert job is not None
     assert job["status"] == "succeeded", job
 
