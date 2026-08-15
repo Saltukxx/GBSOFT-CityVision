@@ -4,7 +4,6 @@ from cityvision.events.engine import EventEngine
 from cityvision.events.roi import filter_event_detections, gate_reason, in_road_roi
 from cityvision.pipeline.types import Detection
 
-
 ROI_CFG = {
     "road_roi": {
         "enabled": True,

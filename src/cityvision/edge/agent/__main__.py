@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     hb = sub.add_parser("heartbeat", help="POST /api/edge/heartbeat")
     hb.add_argument("--disk-free-gb", type=float, default=None)
 
-    dr = sub.add_parser("drain-outbox", help="Retry failed uploads in work-dir/outbox")
+    sub.add_parser("drain-outbox", help="Retry failed uploads in work-dir/outbox")
     return p
 
 

@@ -133,7 +133,7 @@ def main() -> int:
 
     settings = get_settings()
     url = f"http://{settings.api_host}:{settings.api_port}"
-    print(f"\nDemo screens:")
+    print("\nDemo screens:")
     print(f"  Map     {url}/map")
     print(f"  Route   {url}/live")
     print(f"  Detect  {url}/detect")

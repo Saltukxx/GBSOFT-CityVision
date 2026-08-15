@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from cityvision.config import ROOT
 from cityvision.pipeline.model_resolve import resolve_model_b_paths

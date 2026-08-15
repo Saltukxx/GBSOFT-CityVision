@@ -36,3 +36,18 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+# tools/cvat is an upstream clone kept locally for labelling, not our code.
+extend-exclude = ["tools", "docs"]
+
+[tool.ruff.lint]
+# Pinned so a ruff upgrade cannot silently change what CI enforces.
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Entry-point scripts bootstrap sys.path before importing cityvision.
+"scripts/*" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["tools", "docs", "outputs", "runs", "data", ".venv", "node_modules"]
+addopts = "-ra"

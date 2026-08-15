@@ -5,7 +5,6 @@ import json
 import shutil
 import uuid
 import zipfile
-from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile

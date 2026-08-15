@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +27,7 @@ def main() -> int:
     import psycopg
 
     url = _database_url()
-    print(f"Connecting… host from URL (password hidden)")
+    print("Connecting… host from URL (password hidden)")
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
             for sql_path in sorted(INIT_DIR.glob("*.sql")):

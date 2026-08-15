@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: cityvision
+          POSTGRES_PASSWORD: cityvision
+          POSTGRES_DB: cityvision
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U cityvision -d cityvision"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Matches the port docker-compose publishes, so local and CI agree.
+      DATABASE_URL: postgresql://cityvision:cityvision@localhost:5435/cityvision
+      CITYVISION_JOB_INLINE: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          pip install -r requirements-dev.txt
+          pip install -e .
+
+      - name: Apply migrations
+        run: python db/migrate.py
+
+      - name: Verify PostGIS is reachable
+        # The DB-backed tests skip themselves when PostGIS is down. In CI that
+        # would silently pass with half the suite inert, so fail loudly instead.
+        run: |
+          python - <<'PY'
+          import sys
+          from cityvision.db.store import Store
+          if not Store().ping():
+              sys.exit("PostGIS not reachable — DB tests would be skipped")
+          print("PostGIS OK")
+          PY
+
+      - name: Test
+        run: |
+          set -o pipefail
+          pytest -q 2>&1 | tee /tmp/pytest.out
+          if grep -q "PostGIS not reachable" /tmp/pytest.out; then
+            echo "::error::DB-backed tests were skipped in CI"
+            exit 1
+          fi

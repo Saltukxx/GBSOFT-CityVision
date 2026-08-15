@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from cityvision.api.security import create_access_token, hash_password
 from cityvision.db.store import Store
-from cityvision.edge.package import hash_edge_token, safe_extract_zip
+from cityvision.edge.package import safe_extract_zip
 from cityvision.settings import get_settings
 
 
