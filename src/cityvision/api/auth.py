@@ -49,6 +49,7 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
             or path.startswith("/api/cameras")
             or path.startswith("/api/routes")
             or path.startswith("/api/assets")
+            or path.startswith("/api/media")
             or path.startswith("/api/runs")
             or path.startswith("/api/reviews")
             or path.startswith("/api/work-orders")

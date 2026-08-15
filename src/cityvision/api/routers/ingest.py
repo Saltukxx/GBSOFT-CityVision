@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 
 from cityvision.api.deps import get_store, require_admin
 from cityvision.api.schemas import IngestBody
@@ -22,6 +23,45 @@ def list_runs(limit: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
 @router.get("/runs/{run_id}/detections")
 def run_detections(run_id: int) -> list[dict[str, Any]]:
     return get_store().list_detection_stats(run_id)
+
+
+@router.get("/runs/{run_id}/track")
+def run_track(run_id: int) -> dict[str, Any]:
+    row = get_store().get_run(run_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="run not found")
+    summary = row.get("summary") or {}
+    if isinstance(summary, str):
+        try:
+            summary = json.loads(summary)
+        except json.JSONDecodeError:
+            summary = {}
+    coords = summary.get("track") if isinstance(summary, dict) else None
+    if not isinstance(coords, list):
+        coords = []
+    return {
+        "type": "Feature",
+        "properties": {
+            "run_id": row["id"],
+            "vehicle_id": row.get("vehicle_id"),
+            "camera_id": row.get("camera_id"),
+            "model_a": row.get("model_a"),
+            "model_b": row.get("model_b"),
+        },
+        "geometry": {"type": "LineString", "coordinates": coords},
+    }
+
+
+@router.get("/runs/{run_id}/annotated")
+def run_annotated(run_id: int) -> FileResponse:
+    row = get_store().get_run(run_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="run not found")
+    run_dir = Path(str(row.get("run_dir") or ""))
+    path = run_dir / "annotated.mp4"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="annotated video not found")
+    return FileResponse(path, media_type="video/mp4", filename="annotated.mp4")
 
 
 @router.post("/ingest")

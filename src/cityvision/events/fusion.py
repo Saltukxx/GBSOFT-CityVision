@@ -44,6 +44,7 @@ def fuse_detections(
     height: int,
     min_observations: int = 1,
     id_prefix: str = "EVT",
+    skipped_out: Optional[List[Detection]] = None,
 ) -> List[MunicipalEvent]:
     allowed = set(event_classes)
     clusters: List[_Cluster] = []
@@ -128,6 +129,10 @@ def fuse_detections(
     seq = 0
     for cluster in clusters:
         if cluster.observations < min_observations:
+            if skipped_out is not None:
+                sample = _cluster_to_detection(cluster)
+                if sample is not None:
+                    skipped_out.append(sample)
             continue
         seq += 1
         score = composite_confidence(
@@ -174,6 +179,21 @@ def fuse_detections(
             )
         )
     return events
+
+
+def _cluster_to_detection(cluster: _Cluster) -> Optional[Detection]:
+    if cluster.sample_frame is None or not cluster.sample_bbox:
+        return None
+    x1, y1, x2, y2 = (float(v) for v in cluster.sample_bbox[:4])
+    return Detection(
+        frame=int(cluster.sample_frame),
+        timestamp_ms=cluster.last_ms,
+        class_name=cluster.event_type,
+        confidence=float(cluster.max_conf),
+        bbox_xyxy=(x1, y1, x2, y2),
+        lat=cluster.lat,
+        lon=cluster.lon,
+    )
 
 
 def events_from_geofence_hits(

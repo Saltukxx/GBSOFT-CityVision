@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City Vision — Olay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><strong>GBSoft City Vision</strong><span>Olay detay</span></div>
+    <nav id="nav"></nav>
+    <div class="top-meta" id="health">bağlanıyor</div>
+  </header>
+  <section class="layout detail">
+    <div class="stage">
+      <div class="evidence" id="media"><div class="empty">Yükleniyor…</div></div>
+    </div>
+    <aside class="panel">
+      <h2>Karar</h2>
+      <div class="detail-body" id="detail"></div>
+    </aside>
+  </section>
+  <script src="/static/app.js"></script>
+  <script>
+    CV.mountNav("map");
+    CV.pingHealth();
+    const eid = CV.eventIdFromPath();
+
+    function mediaUrl(m) {
+      if (m.url) return m.url;
+      if (m.object_key) return "/api/storage/" + m.object_key;
+      if (m.id) return "/api/media/" + m.id;
+      return "";
+    }
+
+    async function load() {
+      const box = document.getElementById("detail");
+      const mediaEl = document.getElementById("media");
+      if (!eid) {
+        box.innerHTML = `<p class="empty">Olay seçilmedi. <a href="/map">Haritaya dön</a></p>`;
+        return;
+      }
+      const ev = await CV.j("/api/events/" + encodeURIComponent(eid));
+      const obs = ev.observations;
+      const obsCount = Array.isArray(obs) ? obs.length : (obs || 1);
+      const vids = (ev.payload && ev.payload.vehicle_ids) || ev.vehicle_ids || [];
+      const media = ev.media || await CV.j("/api/events/" + encodeURIComponent(eid) + "/media");
+      const images = media.filter((m) => (m.media_type === "image" || m.media_type === "crop") && mediaUrl(m));
+      const clips = media.filter((m) => m.media_type === "clip" && mediaUrl(m));
+      const hero = images.find((m) => (m.path || "").endsWith("event.jpg")) || images[0];
+      let html = "";
+      if (hero) html += `<img src="${mediaUrl(hero)}" alt="${ev.type}" />`;
+      if (clips[0]) html += `<video src="${mediaUrl(clips[0])}" controls playsinline></video>`;
+      if (!html) html = `<div class="empty">Kanıt görseli yok.</div>`;
+      mediaEl.innerHTML = html;
+
+      box.innerHTML = `
+        <h1>${ev.type || "olay"}</h1>
+        <div class="id">${ev.event_id}</div>
+        <dl class="kv">
+          <dt>Güven</dt><dd>${Number(ev.confidence || 0).toFixed(2)} · ${ev.confidence_band || "—"}</dd>
+          <dt>Konum</dt><dd class="mono">${ev.lat ?? "—"}, ${ev.lon ?? "—"}</dd>
+          <dt>Gözlem</dt><dd>${obsCount} kez${vids.length ? " · " + vids.join(", ") : ""}</dd>
+          <dt>Durum</dt><dd>${ev.status || "—"}</dd>
+          <dt>Şiddet</dt><dd>${ev.severity || "—"}</dd>
+        </dl>
+        <div class="actions">
+          <button class="primary" data-label="correct">Onayla</button>
+          <button data-label="wrong">Yanlış alarm</button>
+          <button data-label="resolved">Çözüldü</button>
+        </div>
+        <div class="actions">
+          <select id="unit">
+            <option value="yol_bakim">yol_bakim</option>
+            <option value="temizlik">temizlik</option>
+            <option value="zabita">zabita</option>
+            <option value="ops">ops</option>
+          </select>
+          <button data-label="work_order">İş emri oluştur</button>
+        </div>
+        <p style="margin-top:1.25rem"><a href="/map">← Harita</a></p>
+      `;
+      box.querySelectorAll("button[data-label]").forEach((b) => {
+        b.onclick = async () => {
+          const label = b.dataset.label;
+          const unit = document.getElementById("unit").value;
+          await CV.j("/api/events/" + encodeURIComponent(eid) + "/review", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ label, note: "demo-ui", reviewer: "operator", unit }),
+          });
+          await load();
+        };
+      });
+    }
+
+    load().catch((e) => {
+      document.getElementById("detail").innerHTML = `<p class="err">${e.message}</p>`;
+    });
+  </script>
+</body>
+</html>

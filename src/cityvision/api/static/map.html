@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City Vision — Harita</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><strong>GBSoft City Vision</strong><span>Erzurum · operasyon</span></div>
+    <nav id="nav"></nav>
+    <div class="top-meta" id="health">bağlanıyor</div>
+  </header>
+  <section class="kpis" id="kpis"></section>
+  <div class="legend">
+    <span><i class="dot-review"></i>İnceleme</span>
+    <span><i class="dot-ok"></i>Onaylı</span>
+    <span><i class="dot-wo"></i>İş emri</span>
+    <span><i class="dot-bad"></i>Yanlış alarm</span>
+    <span><i class="dot-done"></i>Çözüldü</span>
+  </div>
+  <section class="layout">
+    <div id="map"></div>
+    <aside class="panel">
+      <h2>Olay kuyruğu</h2>
+      <div class="filters">
+        <select id="statusFilter">
+          <option value="">Tüm status</option>
+          <option value="under_review">under_review</option>
+          <option value="confirmed">confirmed</option>
+          <option value="false_positive">false_positive</option>
+          <option value="work_order_created">work_order_created</option>
+          <option value="resolved">resolved</option>
+        </select>
+        <select id="typeFilter">
+          <option value="">Tüm tip</option>
+          <option value="pothole">pothole</option>
+          <option value="overflowing_container">overflowing_container</option>
+          <option value="street_waste">street_waste</option>
+          <option value="road_crack">road_crack</option>
+          <option value="road_damage">road_damage</option>
+        </select>
+        <button class="ghost" id="reload">Yenile</button>
+      </div>
+      <div class="list" id="list"></div>
+    </aside>
+  </section>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+  <script>
+    CV.mountNav("map");
+    CV.pingHealth();
+    const map = L.map("map").setView([39.90, 41.27], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap",
+    }).addTo(map);
+    const layer = L.layerGroup().addTo(map);
+    const zoneLayer = L.layerGroup().addTo(map);
+    let events = [];
+
+    async function loadKpis() {
+      const k = await CV.j("/api/kpis");
+      const today = k.today_by_type || {};
+      const bits = Object.entries(today).slice(0, 3).map(([t, c]) => t + " " + c).join(" · ") || "—";
+      document.getElementById("kpis").innerHTML = `
+        <div class="kpi"><div class="label">Bugün</div><div class="value">${k.today_total ?? 0}</div><div class="sub">${bits}</div></div>
+        <div class="kpi"><div class="label">İnceleme</div><div class="value">${k.review_queue ?? 0}</div></div>
+        <div class="kpi"><div class="label">Açık iş emri</div><div class="value">${k.open_work_orders ?? 0}</div></div>
+        <div class="kpi"><div class="label">Toplam olay</div><div class="value">${k.events_total ?? 0}</div></div>
+      `;
+    }
+
+    async function loadZones() {
+      try {
+        const fc = await CV.j("/api/zones.geojson");
+        zoneLayer.clearLayers();
+        if (!fc.features || !fc.features.length) return;
+        zoneLayer.addLayer(L.geoJSON(fc, {
+          style: { color: "#34d399", weight: 1.5, fillOpacity: 0.12 },
+          onEachFeature: (f, l) => {
+            const p = f.properties || {};
+            l.bindPopup((p.name || p.zone_id || "") + "<br>" + (p.type || ""));
+          },
+        }));
+      } catch (_) {}
+    }
+
+    function renderList() {
+      const el = document.getElementById("list");
+      if (!events.length) {
+        el.innerHTML = `<div class="empty">Kayıt yok. Demo için:<br><code>python scripts/demo_e2e.py</code></div>`;
+        return;
+      }
+      el.innerHTML = events.map((e) => `
+        <div class="row" data-id="${e.event_id}">
+          <div><strong>${e.type || "?"}</strong> · ${e.status || ""}</div>
+          <div class="meta"><span class="id">${e.event_id}</span> · conf ${Number(e.confidence || 0).toFixed(2)} · obs ${e.observations || 1}</div>
+        </div>
+      `).join("");
+      el.querySelectorAll(".row").forEach((n) => {
+        n.onclick = () => { window.location.href = "/events/" + encodeURIComponent(n.dataset.id); };
+      });
+    }
+
+    function renderMap() {
+      layer.clearLayers();
+      const pts = events.filter((e) => e.lat != null && e.lon != null);
+      pts.forEach((e) => {
+        const m = L.circleMarker([e.lat, e.lon], {
+          radius: CV.severityRadius(e.severity),
+          color: CV.statusColor(e.status),
+          weight: 2,
+          fillOpacity: 0.75,
+        }).bindPopup(`<a href="/events/${encodeURIComponent(e.event_id)}">${e.type}<br>${e.event_id}</a>`);
+        m.on("click", () => { window.location.href = "/events/" + encodeURIComponent(e.event_id); });
+        layer.addLayer(m);
+      });
+      if (pts.length) map.fitBounds(L.latLngBounds(pts.map((e) => [e.lat, e.lon])).pad(0.25));
+    }
+
+    async function refresh() {
+      const q = new URLSearchParams();
+      const st = document.getElementById("statusFilter").value;
+      const tp = document.getElementById("typeFilter").value;
+      if (st) q.set("status", st);
+      if (tp) q.set("type", tp);
+      events = await CV.j("/api/events?" + q.toString());
+      renderList();
+      renderMap();
+      await loadKpis();
+    }
+
+    document.getElementById("reload").onclick = refresh;
+    document.getElementById("statusFilter").onchange = refresh;
+    document.getElementById("typeFilter").onchange = refresh;
+    loadZones();
+    refresh().catch((e) => {
+      document.getElementById("list").innerHTML = `<div class="err">${e.message}</div>`;
+    });
+  </script>
+</body>
+</html>

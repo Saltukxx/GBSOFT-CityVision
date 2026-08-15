@@ -132,8 +132,11 @@ def main() -> int:
     print(json.dumps(kpis, indent=2, ensure_ascii=False, default=str))
 
     settings = get_settings()
-    url = f"http://{settings.api_host}:{settings.api_port}/"
-    print(f"\nDashboard: {url}")
+    url = f"http://{settings.api_host}:{settings.api_port}"
+    print(f"\nDemo screens:")
+    print(f"  Map     {url}/map")
+    print(f"  Route   {url}/live")
+    print(f"  Detect  {url}/detect")
     print("Login (if auth on): operator / operator")
 
     if args.serve:

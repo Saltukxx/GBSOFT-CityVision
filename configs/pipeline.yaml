@@ -1,6 +1,8 @@
 video:
   stride: 1
   max_frames: null
+  start_sec: 0
+  duration_sec: null
 
 detection:
   # Model A: general objects (vehicles, person, signs…)
@@ -88,6 +90,8 @@ events:
       - road_damage
       - overflowing_container
       - street_waste
+  dump_rejected: true
+  max_rejected: 200
 
 confidence:
   bands:
@@ -105,6 +109,7 @@ evidence:
   save_full_frame: true
   save_crop: true
   save_clips: true
+  draw_boxes: true
   max_events: 50
 
 export:

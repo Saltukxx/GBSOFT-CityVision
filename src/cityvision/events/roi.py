@@ -45,6 +45,53 @@ def passes_class_gates(
     return float(det.confidence) >= float(floor)
 
 
+def _roi_apply_to(cfg: Dict[str, Any]) -> set[str]:
+    roi = dict(cfg.get("road_roi") or {})
+    return set(
+        roi.get("apply_to")
+        or [
+            "pothole",
+            "road_crack",
+            "road_damage",
+        ]
+    )
+
+
+def gate_reason(
+    det: Detection,
+    *,
+    width: int,
+    height: int,
+    cfg: Dict[str, Any],
+) -> Optional[str]:
+    """Why this detection is dropped before fusion, or None if it passes."""
+    class_min = dict(cfg.get("class_min_confidence") or {})
+    if not passes_class_gates(det, class_min_confidence=class_min):
+        return "low_confidence"
+    roi = dict(cfg.get("road_roi") or {})
+    if det.class_name in _roi_apply_to(cfg) and not in_road_roi(det, width, height, roi):
+        return "outside_roi"
+    return None
+
+
+def partition_event_detections(
+    detections: Sequence[Detection],
+    *,
+    width: int,
+    height: int,
+    cfg: Dict[str, Any],
+) -> tuple[list[Detection], list[tuple[Detection, str]]]:
+    kept: list[Detection] = []
+    rejected: list[tuple[Detection, str]] = []
+    for det in detections:
+        reason = gate_reason(det, width=width, height=height, cfg=cfg)
+        if reason is None:
+            kept.append(det)
+        else:
+            rejected.append((det, reason))
+    return kept, rejected
+
+
 def filter_event_detections(
     detections: Sequence[Detection],
     *,
@@ -58,21 +105,7 @@ def filter_event_detections(
     Classes listed in road_roi.apply_to (default: road defect types) must fall
     in the ROI. Other event classes only need class_min_confidence.
     """
-    roi = dict(cfg.get("road_roi") or {})
-    apply_to = set(
-        roi.get("apply_to")
-        or [
-            "pothole",
-            "road_crack",
-            "road_damage",
-        ]
+    kept, _rejected = partition_event_detections(
+        detections, width=width, height=height, cfg=cfg
     )
-    class_min = dict(cfg.get("class_min_confidence") or {})
-    out: list[Detection] = []
-    for det in detections:
-        if not passes_class_gates(det, class_min_confidence=class_min):
-            continue
-        if det.class_name in apply_to and not in_road_roi(det, width, height, roi):
-            continue
-        out.append(det)
-    return out
+    return kept

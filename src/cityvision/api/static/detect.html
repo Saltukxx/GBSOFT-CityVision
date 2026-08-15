@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City Vision — Tespit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><strong>GBSoft City Vision</strong><span>AI tespit</span></div>
+    <nav id="nav"></nav>
+    <div class="top-meta" id="health">bağlanıyor</div>
+  </header>
+  <div class="toolbar">
+    <select id="runSelect"></select>
+    <button class="ghost" id="reload">Yükle</button>
+    <a href="/map">Haritaya dön</a>
+  </div>
+  <div class="stage">
+    <video id="player" controls playsinline></video>
+    <div class="hud" id="hud">Koşu seçin</div>
+  </div>
+  <script src="/static/app.js"></script>
+  <script>
+    CV.mountNav("detect");
+    CV.pingHealth();
+    const player = document.getElementById("player");
+    const hud = document.getElementById("hud");
+
+    async function loadRuns() {
+      const runs = await CV.j("/api/runs?limit=50");
+      const sel = document.getElementById("runSelect");
+      const qRun = CV.qs("run");
+      sel.innerHTML = runs.map((r) =>
+        `<option value="${r.id}" ${String(r.id) === qRun ? "selected" : ""}>#${r.id} ${r.vehicle_id || "—"} ${r.camera_id || ""}</option>`
+      ).join("") || `<option value="">Koşu yok</option>`;
+      if (sel.value) await loadVideo(sel.value, runs.find((r) => String(r.id) === sel.value));
+    }
+
+    function modelLabel(meta) {
+      const a = meta.model_a;
+      const b = meta.model_b;
+      if (a && b) return String(a) + " + " + (typeof b === "object" ? JSON.stringify(b) : b);
+      return a || (typeof b === "string" ? b : "—");
+    }
+
+    async function loadVideo(runId, runMeta) {
+      const url = "/api/runs/" + runId + "/annotated";
+      player.src = url;
+      player.onerror = () => {
+        hud.textContent = "Bu koşuda annotated.mp4 yok. Simulate veya pipeline çıktısı gerekli.";
+      };
+      const meta = runMeta || {};
+      const paint = (frame) => {
+        hud.innerHTML = `
+          <span>Araç <strong>${meta.vehicle_id || "—"}</strong></span>
+          <span>Kare <strong>${frame}</strong></span>
+          <span>Model <strong>${modelLabel(meta)}</strong></span>
+          <span>Koşu <strong class="id">#${runId}</strong></span>
+          <span><a href="/live">Güzergâh</a></span>
+        `;
+      };
+      paint(0);
+      player.ontimeupdate = () => paint(Math.floor(player.currentTime * 15));
+    }
+
+    document.getElementById("reload").onclick = () => {
+      const sel = document.getElementById("runSelect");
+      loadVideo(sel.value);
+    };
+    document.getElementById("runSelect").onchange = async (e) => {
+      const runs = await CV.j("/api/runs?limit=50");
+      loadVideo(e.target.value, runs.find((r) => String(r.id) === e.target.value));
+    };
+    loadRuns().catch((e) => { hud.textContent = e.message; });
+  </script>
+</body>
+</html>

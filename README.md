@@ -32,6 +32,10 @@ python scripts/run_pipeline.py \
   --zones configs/zones.example.geojson \
   --vehicle-id BUS-17 \
   --camera-id FRONT
+
+# Clip a window without editing yaml (e.g. 5 minutes starting at 0):
+# python scripts/run_pipeline.py --source data/samples/d100_osmancik.mp4 \
+#   --output outputs/d100_5m --start-sec 0 --duration 300 --stride 2
 ```
 
 Çıktılar:
@@ -56,7 +60,11 @@ python scripts/ingest_run.py outputs/simulate_001
 python scripts/serve_api.py --port 8088
 ```
 
-- Dashboard: http://127.0.0.1:8088/
+- Dashboard (4 ekran):
+  - Harita: http://127.0.0.1:8088/map
+  - Güzergâh: http://127.0.0.1:8088/live
+  - Tespit videosu: http://127.0.0.1:8088/detect
+  - Olay detay: http://127.0.0.1:8088/events/{id}
 - OpenAPI: http://127.0.0.1:8088/docs
 - Health: `/health` · KPIs: `/api/kpis`
 - Fleet: `/api/vehicles` `/api/cameras` `/api/routes` `/api/assets`
@@ -83,6 +91,16 @@ python scripts/serve_api.py --port 8088
 ## Offline event demo (YOLO gerekmez)
 
 Üç otobüsün aynı çukuru görmesi + durak geofence senaryosu:
+
+```bash
+docker compose up -d db
+python db/migrate.py
+python scripts/demo_e2e.py
+python scripts/serve_api.py --port 8088
+# tarayıcı: http://127.0.0.1:8088/map
+```
+
+Sadece rapor:
 
 ```bash
 python scripts/simulate_events_demo.py

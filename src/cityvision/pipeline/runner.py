@@ -11,6 +11,7 @@ from tqdm import tqdm
 from cityvision.config import load_pipeline_config
 from cityvision.events.engine import EventEngine
 from cityvision.events.evidence import write_evidence_packs
+from cityvision.events.rejected import write_rejected_samples
 from cityvision.geo.geofence import GeofenceEngine, load_zones
 from cityvision.geo.gps import attach_gps_to_detections, load_gps_sidecar
 from cityvision.pipeline.annotate import draw_detections
@@ -35,12 +36,22 @@ def run_pipeline(
     vehicle_id: Optional[str] = None,
     camera_id: Optional[str] = None,
     city_id: Optional[str] = None,
+    start_sec: Optional[float] = None,
+    duration_sec: Optional[float] = None,
+    stride: Optional[int] = None,
 ) -> Path:
     cfg = pipeline_cfg or load_pipeline_config(city_id=city_id)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    video_cfg = cfg.get("video", {})
+    video_cfg = dict(cfg.get("video") or {})
+    if start_sec is not None:
+        video_cfg["start_sec"] = float(start_sec)
+    if duration_sec is not None:
+        video_cfg["duration_sec"] = float(duration_sec)
+    if stride is not None:
+        video_cfg["stride"] = int(stride)
+    cfg["video"] = video_cfg
     det_cfg = cfg.get("detection", {})
     track_cfg = cfg.get("tracking", {})
     gps_cfg = cfg.get("gps", {})
@@ -119,6 +130,8 @@ def run_pipeline(
         source,
         stride=int(video_cfg.get("stride", 1)),
         max_frames=video_cfg.get("max_frames"),
+        start_sec=float(video_cfg.get("start_sec") or 0),
+        duration_sec=video_cfg.get("duration_sec"),
     ) as reader:
         if traffic is not None:
             traffic.line_y = reader.height * line_y_ratio
@@ -148,7 +161,7 @@ def run_pipeline(
                 (reader.width, reader.height),
             )
 
-        total = reader.frame_count // max(1, int(video_cfg.get("stride", 1))) or None
+        total = reader.planned_emits()
         for batch in tqdm(reader, total=total, desc="frames"):
             dets = detector.infer(
                 batch.image,
@@ -228,6 +241,16 @@ def run_pipeline(
             save_crop=bool(evidence_cfg.get("save_crop", True)),
             save_clips=bool(evidence_cfg.get("save_clips", True)),
             max_events=int(evidence_cfg.get("max_events", 50)),
+            draw_boxes=bool(evidence_cfg.get("draw_boxes", True)),
+        )
+
+    rejected_summary: Dict[str, Any] = {"count": 0, "written": 0, "reasons": {}}
+    if events_cfg.get("dump_rejected", True) and event_engine is not None:
+        rejected_summary = write_rejected_samples(
+            source_video=source,
+            rejected=event_engine.last_rejected,
+            output_dir=out,
+            max_samples=int(events_cfg.get("max_rejected", 200)),
         )
 
     event_dicts = [e.to_dict() for e in events]
@@ -250,6 +273,7 @@ def run_pipeline(
         "unique_tracks": len(track_ids),
         "tracking": use_tracking,
         "events": len(events),
+        "rejected": rejected_summary,
         "review_queue": review_queue,
         "gps_enabled": bool(gps_fixes),
         "geofence_hits": len(geo_hits),

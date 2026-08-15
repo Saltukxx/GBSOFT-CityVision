@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City Vision — Güzergâh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><strong>GBSoft City Vision</strong><span>Canlı güzergâh</span></div>
+    <nav id="nav"></nav>
+    <div class="top-meta" id="health">bağlanıyor</div>
+  </header>
+  <section class="layout wide">
+    <div id="map"></div>
+    <aside class="panel">
+      <h2>Koşu</h2>
+      <div class="filters">
+        <select id="runSelect"></select>
+        <button class="ghost" id="reload">Yükle</button>
+      </div>
+      <div class="detail-body" id="info">
+        <p class="empty">Bir koşu seçin. GPS izi ingest sırasında detections.jsonl’den üretilir.</p>
+      </div>
+    </aside>
+  </section>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+  <script>
+    CV.mountNav("live");
+    CV.pingHealth();
+    const map = L.map("map").setView([39.90, 41.27], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap",
+    }).addTo(map);
+    const trackLayer = L.layerGroup().addTo(map);
+    const zoneLayer = L.layerGroup().addTo(map);
+
+    async function loadZones() {
+      try {
+        const fc = await CV.j("/api/zones.geojson");
+        zoneLayer.clearLayers();
+        if (fc.features && fc.features.length) {
+          zoneLayer.addLayer(L.geoJSON(fc, {
+            style: { color: "#34d399", weight: 1.5, fillOpacity: 0.12 },
+          }));
+        }
+      } catch (_) {}
+    }
+
+    async function loadRuns() {
+      const runs = await CV.j("/api/runs?limit=50");
+      const sel = document.getElementById("runSelect");
+      sel.innerHTML = runs.map((r) =>
+        `<option value="${r.id}">#${r.id} ${r.vehicle_id || "—"} ${r.camera_id || ""}</option>`
+      ).join("") || `<option value="">Koşu yok</option>`;
+      if (runs.length) await loadTrack(runs[0].id);
+    }
+
+    async function loadTrack(runId) {
+      const info = document.getElementById("info");
+      trackLayer.clearLayers();
+      if (!runId) {
+        info.innerHTML = `<p class="empty">Koşu yok. <code>python scripts/demo_e2e.py</code></p>`;
+        return;
+      }
+      const feat = await CV.j("/api/runs/" + runId + "/track");
+      const coords = (feat.geometry && feat.geometry.coordinates) || [];
+      const p = feat.properties || {};
+      info.innerHTML = `
+        <dl class="kv">
+          <dt>Koşu</dt><dd class="id">#${runId}</dd>
+          <dt>Araç</dt><dd>${p.vehicle_id || "—"}</dd>
+          <dt>Kamera</dt><dd>${p.camera_id || "—"}</dd>
+          <dt>Nokta</dt><dd>${coords.length}</dd>
+        </dl>
+        <p><a href="/detect?run=${runId}">Tespit videosu</a></p>
+      `;
+      if (coords.length < 2) {
+        info.innerHTML += `<p class="empty">Bu koşuda GPS izi yok.</p>`;
+        return;
+      }
+      const latlngs = coords.map((c) => [c[1], c[0]]);
+      const line = L.polyline(latlngs, { color: "#22d3ee", weight: 3, opacity: 0.9 });
+      trackLayer.addLayer(line);
+      const last = latlngs[latlngs.length - 1];
+      trackLayer.addLayer(L.circleMarker(last, {
+        radius: 8, color: "#eaf0fa", fillColor: "#22d3ee", fillOpacity: 1, weight: 2,
+      }).bindPopup(p.vehicle_id || "araç"));
+      map.fitBounds(line.getBounds().pad(0.2));
+    }
+
+    document.getElementById("reload").onclick = () => loadTrack(document.getElementById("runSelect").value);
+    document.getElementById("runSelect").onchange = (e) => loadTrack(e.target.value);
+    loadZones();
+    loadRuns().catch((e) => {
+      document.getElementById("info").innerHTML = `<p class="err">${e.message}</p>`;
+    });
+  </script>
+</body>
+</html>

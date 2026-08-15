@@ -28,6 +28,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--no-track", action="store_true", help="Disable tracking")
     run.add_argument("--config", default=None, help="Optional pipeline.yaml override")
+    run.add_argument("--start-sec", type=float, default=None, help="Skip this many seconds from the start")
+    run.add_argument(
+        "--duration",
+        type=float,
+        default=None,
+        help="Only process this many seconds (wall-clock of the source video)",
+    )
+    run.add_argument("--stride", type=int, default=None, help="Keep every Nth frame (overrides config)")
 
     rev = sub.add_parser("review", help="Human-in-the-loop feedback on an event")
     rev.add_argument("--output", required=True, help="Run output directory")
@@ -106,6 +114,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             vehicle_id=args.vehicle_id,
             camera_id=args.camera_id,
             city_id=city,
+            start_sec=args.start_sec,
+            duration_sec=args.duration,
+            stride=args.stride,
         )
         summary_path = Path(out) / "summary.json"
         print(f"Done → {Path(out).resolve()}")

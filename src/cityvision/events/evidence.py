@@ -7,7 +7,8 @@ from typing import Dict, List, Optional, Sequence
 import cv2
 import numpy as np
 
-from cityvision.pipeline.types import MunicipalEvent
+from cityvision.pipeline.annotate import draw_detections
+from cityvision.pipeline.types import Detection, MunicipalEvent
 
 
 def _read_frame_at(cap: cv2.VideoCapture, frame_idx: int) -> Optional[np.ndarray]:
@@ -29,6 +30,7 @@ def write_evidence_packs(
     save_crop: bool = True,
     save_clips: bool = True,
     max_events: int = 50,
+    draw_boxes: bool = True,
 ) -> List[MunicipalEvent]:
     out = Path(output_dir) / "evidence"
     out.mkdir(parents=True, exist_ok=True)
@@ -57,7 +59,22 @@ def write_evidence_packs(
         frame = _read_frame_at(cap, int(event.sample_frame))
         if frame is not None:
             if save_full_frame:
-                cv2.imwrite(str(ed / "event.jpg"), frame)
+                still = frame
+                if draw_boxes and event.sample_bbox:
+                    x1, y1, x2, y2 = (float(v) for v in event.sample_bbox[:4])
+                    still = draw_detections(
+                        frame,
+                        [
+                            Detection(
+                                frame=int(event.sample_frame),
+                                timestamp_ms=event.last_seen_ms,
+                                class_name=event.type,
+                                confidence=float(event.confidence),
+                                bbox_xyxy=(x1, y1, x2, y2),
+                            )
+                        ],
+                    )
+                cv2.imwrite(str(ed / "event.jpg"), still)
             if save_crop and event.sample_bbox:
                 x1, y1, x2, y2 = [int(v) for v in event.sample_bbox]
                 x1, y1 = max(0, x1), max(0, y1)

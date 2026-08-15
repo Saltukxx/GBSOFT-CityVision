@@ -154,7 +154,10 @@ def test_api_smoke_health_review_export(store: Store):
     client = TestClient(app)
     assert client.get("/health").status_code == 200
     assert client.get("/api/kpis").status_code == 200
-    assert client.get("/api/events").status_code == 200
+    assert client.get("/map").status_code == 200
+    assert client.get("/live").status_code == 200
+    assert client.get("/detect").status_code == 200
+    assert client.get(f"/events/{eid}").status_code == 200
 
     rev = client.post(
         f"/api/events/{eid}/review",

@@ -723,13 +723,26 @@ class Store:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, run_dir, source, vehicle_id, camera_id, created_at
+                    SELECT id, run_dir, source, vehicle_id, camera_id, model_a, model_b, created_at
                     FROM runs ORDER BY id DESC LIMIT %s
                     """,
                     (limit,),
                 )
                 rows = cur.fetchall()
         return [_serialize_row(r) for r in rows]
+
+    def get_run(self, run_id: int) -> Optional[Dict[str, Any]]:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, run_dir, source, vehicle_id, camera_id, model_a, model_b, summary, city_id, created_at
+                    FROM runs WHERE id = %s
+                    """,
+                    (run_id,),
+                )
+                row = cur.fetchone()
+        return _serialize_row(row) if row else None
 
     def events_near(
         self, lat: float, lon: float, radius_m: float = 50.0, limit: int = 50

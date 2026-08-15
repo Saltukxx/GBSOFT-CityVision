@@ -51,6 +51,8 @@ def ingest_run_dir(run_dir: str | Path, store: Store | None = None) -> Dict[str,
     class_counts: Dict[tuple[str, str], Dict[str, Any]] = defaultdict(
         lambda: {"count": 0, "conf_sum": 0.0}
     )
+    track_pts: List[List[float]] = []
+    last_ll: Tuple[float, float] | None = None
     if det_path.exists():
         with det_path.open(encoding="utf-8") as f:
             for i, line in enumerate(f):
@@ -92,6 +94,25 @@ def ingest_run_dir(run_dir: str | Path, store: Store | None = None) -> Dict[str,
                     key = (name, role)
                     class_counts[key]["count"] += 1
                     class_counts[key]["conf_sum"] += float(det.get("confidence") or 0.0)
+                    lat, lon = det.get("lat"), det.get("lon")
+                    if lat is None or lon is None:
+                        continue
+                    pair = (float(lon), float(lat))
+                    if last_ll is None or abs(pair[0] - last_ll[0]) > 1e-6 or abs(pair[1] - last_ll[1]) > 1e-6:
+                        track_pts.append([pair[0], pair[1]])
+                        last_ll = pair
+
+    if not track_pts:
+        for ev in events:
+            if not isinstance(ev, dict):
+                continue
+            lat, lon = ev.get("lat"), ev.get("lon")
+            if lat is None or lon is None:
+                continue
+            track_pts.append([float(lon), float(lat)])
+    if track_pts:
+        summary = dict(summary)
+        summary["track"] = _downsample_track(track_pts)
 
     # Ensure fleet rows exist before FK-ish attribution
     vehicle_ids: set[str] = set()
@@ -200,6 +221,18 @@ def ingest_run_dir(run_dir: str | Path, store: Store | None = None) -> Dict[str,
         "city_id": meta.get("city_id"),
         "kpis": store.kpis(city_id=meta.get("city_id")),
     }
+
+
+def _downsample_track(points: List[List[float]], max_points: int = 200) -> List[List[float]]:
+    """Keep first/last and evenly spaced points. GeoJSON order: [lon, lat]."""
+    if len(points) <= max_points:
+        return points
+    last = points[-1]
+    step = (len(points) - 1) / (max_points - 1)
+    out = [points[int(round(i * step))] for i in range(max_points - 1)]
+    if out[-1] != last:
+        out.append(last)
+    return out
 
 
 def _upsert_or_merge_event(

@@ -56,6 +56,10 @@ data/raw/roadeye_hf/
 .env.*
 !.env.example
 
+# Local scratch (unrelated side work, PDF renders)
+.work/
+tmp/
+
 # Docker
 *.log
 

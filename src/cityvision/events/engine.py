@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence
 
 from cityvision.events.fusion import events_from_geofence_hits, fuse_detections
-from cityvision.events.roi import filter_event_detections
+from cityvision.events.roi import partition_event_detections
 from cityvision.geo.geofence import ZoneHit
 from cityvision.pipeline.types import Detection, MunicipalEvent
 
@@ -14,6 +14,7 @@ class EventEngine:
         self.conf_cfg = conf_cfg
         self.model_version = model_version
         self._buffer: List[Detection] = []
+        self.last_rejected: List[tuple[Detection, str]] = []
 
     def ingest(self, detections: Sequence[Detection]) -> None:
         event_classes = set(self.cfg.get("event_classes") or [])
@@ -39,12 +40,13 @@ class EventEngine:
             "probable": 0.95,
         }
         window_h = float(self.cfg.get("fusion_window_hours", 72))
-        gated = filter_event_detections(
+        gated, rejected = partition_event_detections(
             self._buffer,
             width=width,
             height=height,
             cfg=self.cfg,
         )
+        skipped: List[Detection] = []
         events = fuse_detections(
             detections=gated,
             event_classes=self.cfg.get("event_classes") or [],
@@ -57,10 +59,35 @@ class EventEngine:
             width=width,
             height=height,
             min_observations=int(self.cfg.get("min_observations", 1)),
+            skipped_out=skipped,
         )
+        for sample in skipped:
+            rejected.append((sample, "below_min_observations"))
         drop_bands = set(self.cfg.get("drop_confidence_bands") or [])
         if drop_bands:
-            events = [e for e in events if e.confidence_band not in drop_bands]
+            kept_events = []
+            for event in events:
+                if event.confidence_band in drop_bands:
+                    if event.sample_frame is not None and event.sample_bbox:
+                        x1, y1, x2, y2 = (float(v) for v in event.sample_bbox[:4])
+                        rejected.append(
+                            (
+                                Detection(
+                                    frame=int(event.sample_frame),
+                                    timestamp_ms=event.last_seen_ms,
+                                    class_name=event.type,
+                                    confidence=float(event.confidence),
+                                    bbox_xyxy=(x1, y1, x2, y2),
+                                    lat=event.lat,
+                                    lon=event.lon,
+                                ),
+                                "discard_band",
+                            )
+                        )
+                    continue
+                kept_events.append(event)
+            events = kept_events
+        self.last_rejected = rejected
         if geofence_hits:
             geo_events = events_from_geofence_hits(
                 hits=geofence_hits,

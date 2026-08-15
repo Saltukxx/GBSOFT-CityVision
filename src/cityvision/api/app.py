@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from cityvision.api.auth import ApiKeyMiddleware
@@ -42,12 +42,36 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-@app.get("/", response_class=HTMLResponse)
-def dashboard() -> HTMLResponse:
-    index = STATIC_DIR / "index.html"
-    if not index.exists():
-        return HTMLResponse("<h1>City Vision</h1><p>Dashboard missing.</p>")
-    return HTMLResponse(index.read_text(encoding="utf-8"))
+@app.get("/")
+def dashboard() -> RedirectResponse:
+    return RedirectResponse(url="/map", status_code=307)
+
+
+def _static_html(name: str) -> HTMLResponse:
+    path = STATIC_DIR / name
+    if not path.exists():
+        return HTMLResponse("<h1>Missing page</h1>", status_code=404)
+    return HTMLResponse(path.read_text(encoding="utf-8"))
+
+
+@app.get("/map", response_class=HTMLResponse)
+def page_map() -> HTMLResponse:
+    return _static_html("map.html")
+
+
+@app.get("/live", response_class=HTMLResponse)
+def page_live() -> HTMLResponse:
+    return _static_html("live.html")
+
+
+@app.get("/detect", response_class=HTMLResponse)
+def page_detect() -> HTMLResponse:
+    return _static_html("detect.html")
+
+
+@app.get("/events/{event_id}", response_class=HTMLResponse)
+def page_event(event_id: str) -> HTMLResponse:
+    return _static_html("event.html")
 
 
 @app.get("/report/{run_name}")
