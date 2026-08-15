@@ -78,6 +78,31 @@ require_operator = require_roles(*OPERATOR_ROLES, "api_key")
 require_admin = require_roles(*ADMIN_ROLES, "api_key")
 
 
+def check_media_access(
+    resource: str,
+    *,
+    principal: Principal,
+    exp: Optional[str] = None,
+    sig: Optional[str] = None,
+) -> None:
+    """Authorize an evidence media read, or raise 401.
+
+    Accepts a normal credential (JWT / API key) or a signed URL handed out by
+    an authenticated listing endpoint, since ``<img>``/``<video>`` tags cannot
+    send headers. A deployment with no credential configured at all stays open,
+    matching the rest of the optional-auth design.
+    """
+    from cityvision.api.media_tokens import verify_media_token
+
+    if not get_settings().auth_configured:
+        return
+    if principal.is_authenticated:
+        return
+    if verify_media_token(resource, exp, sig):
+        return
+    raise HTTPException(status_code=401, detail="authentication required for media")
+
+
 def resolve_city_id(city_id: Optional[str] = None) -> Optional[str]:
     """Explicit city query wins; otherwise settings.default_city."""
     if city_id:

@@ -48,12 +48,12 @@
     }
 
     async function loadVideo(runId, runMeta) {
-      const url = "/api/runs/" + runId + "/annotated";
-      player.src = url;
+      const meta = runMeta || {};
+      // annotated_url is signed by the API when auth is configured.
+      player.src = meta.annotated_url || "/api/runs/" + runId + "/annotated";
       player.onerror = () => {
         hud.textContent = "Bu koşuda annotated.mp4 yok. Simulate veya pipeline çıktısı gerekli.";
       };
-      const meta = runMeta || {};
       const paint = (frame) => {
         hud.innerHTML = `
           <span>Araç <strong>${meta.vehicle_id || "—"}</strong></span>
@@ -67,14 +67,17 @@
       player.ontimeupdate = () => paint(Math.floor(player.currentTime * 15));
     }
 
-    document.getElementById("reload").onclick = () => {
-      const sel = document.getElementById("runSelect");
-      loadVideo(sel.value);
-    };
-    document.getElementById("runSelect").onchange = async (e) => {
+    // Runs carry a signed annotated_url, so always reload from the API
+    // rather than reconstructing the media path by hand.
+    async function selectRun(runId) {
       const runs = await CV.j("/api/runs?limit=50");
-      loadVideo(e.target.value, runs.find((r) => String(r.id) === e.target.value));
+      loadVideo(runId, runs.find((r) => String(r.id) === String(runId)));
+    }
+
+    document.getElementById("reload").onclick = () => {
+      selectRun(document.getElementById("runSelect").value);
     };
+    document.getElementById("runSelect").onchange = (e) => selectRun(e.target.value);
     loadRuns().catch((e) => { hud.textContent = e.message; });
   </script>
 </body>

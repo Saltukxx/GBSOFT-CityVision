@@ -1,12 +1,49 @@
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from cityvision.settings import get_settings
+
+# Read-only endpoints the operator dashboard polls without a credential.
+# Evidence media (/api/storage, /api/media) is deliberately *not* here — it is
+# personal data and is gated in the media routes themselves.
+OPEN_READ_PREFIXES: tuple[str, ...] = (
+    "/api/events",
+    "/api/zones",
+    "/api/vehicles",
+    "/api/cameras",
+    "/api/routes",
+    "/api/assets",
+    "/api/runs",
+    "/api/reviews",
+    "/api/work-orders",
+    "/api/jobs",
+    "/api/users",
+)
+
+ALWAYS_OPEN_PATHS: frozenset[str] = frozenset({"/api/kpis", "/health"})
+
+# Evidence media. The middleware cannot evaluate these: browsers fetch them
+# from <img>/<video> tags that carry no Authorization header, so access is
+# granted by a signed URL query string instead. check_media_access() in the
+# route does the real enforcement — passing through here is not "open".
+MEDIA_PREFIXES: tuple[str, ...] = ("/api/storage", "/api/media")
+
+
+def _matches(path: str, prefixes: Iterable[str]) -> bool:
+    """Exact match, or a path segment prefix. "/" only ever matches itself."""
+    for p in prefixes:
+        if p == "/":
+            if path == "/":
+                return True
+            continue
+        if path == p or path.startswith(p.rstrip("/") + "/"):
+            return True
+    return False
 
 
 class ApiKeyMiddleware(BaseHTTPMiddleware):
@@ -18,44 +55,29 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         path = request.url.path
-        if path == "/" or any(
-            path == p or path.startswith(p.rstrip("/") + "/")
-            for p in settings.auth_exempt_prefixes
-            if p != "/"
-        ):
-            # dashboard + docs remain open; mutating API needs key
-            if path.startswith("/api/"):
-                pass
-            else:
-                return await call_next(request)
+
+        # Dashboard shell, docs, static assets and the login endpoint itself
+        # are open — login must be reachable to obtain a JWT at all.
+        if _matches(path, settings.auth_exempt_prefixes):
+            return await call_next(request)
 
         if not path.startswith("/api/"):
             return await call_next(request)
 
-        # GET health/kpis stay open for operator dashboard JS
-        if request.method == "GET" and path in {"/api/kpis", "/health"}:
+        if path in ALWAYS_OPEN_PATHS:
             return await call_next(request)
-        # Edge device token auth is enforced in the edge router itself
+
+        # Edge device tokens are verified by the edge router's dependency.
         if path.startswith("/api/edge/") and (
             request.headers.get("x-edge-token")
             or (request.headers.get("authorization") or "").lower().startswith("bearer ")
         ):
             return await call_next(request)
-        if request.method == "GET" and (
-            path.startswith("/api/events")
-            or path.startswith("/api/zones")
-            or path.startswith("/api/storage")
-            or path.startswith("/api/vehicles")
-            or path.startswith("/api/cameras")
-            or path.startswith("/api/routes")
-            or path.startswith("/api/assets")
-            or path.startswith("/api/media")
-            or path.startswith("/api/runs")
-            or path.startswith("/api/reviews")
-            or path.startswith("/api/work-orders")
-            or path.startswith("/api/jobs")
-            or path.startswith("/api/users")
-        ):
+
+        if request.method == "GET" and _matches(path, OPEN_READ_PREFIXES):
+            return await call_next(request)
+
+        if request.method == "GET" and _matches(path, MEDIA_PREFIXES):
             return await call_next(request)
 
         provided = request.headers.get("x-api-key") or _bearer(request.headers.get("authorization"))

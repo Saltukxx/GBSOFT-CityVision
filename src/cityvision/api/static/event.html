@@ -31,6 +31,8 @@
 
     function mediaUrl(m) {
       if (m.url) return m.url;
+      // The API hands out signed URLs; img/video tags cannot send headers.
+      if (m.url) return m.url;
       if (m.object_key) return "/api/storage/" + m.object_key;
       if (m.id) return "/api/media/" + m.id;
       return "";

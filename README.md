@@ -75,6 +75,14 @@ python scripts/serve_api.py --port 8088
 - MinIO/S3 (optional): `docker compose --profile minio up -d` + set `CITYVISION_S3_ENDPOINT=http://127.0.0.1:9000`
 - Work orders: `PATCH /api/work-orders/{id}` (`status` / `assignee`)
 - Auth (optional): `CITYVISION_API_KEY` and/or JWT (`POST /api/auth/login`)
+  - **Kanıt medyası kimliğe bağlı:** API key veya JWT secret set edildiği anda
+    `/api/storage/*`, `/api/media/*` ve `/api/runs/{id}/annotated` kimlik ister.
+    Tarayıcı `<img>`/`<video>` etiketi header gönderemediği için listeleme
+    uçları kısa ömürlü **imzalı URL** döndürür (`?exp=…&sig=…`,
+    `CITYVISION_MEDIA_URL_TTL_SEC`). İkisi de boşsa API tamamen açıktır —
+    laptop demosu için uygun, kurulum için değil.
+  - Dashboard'da token: tarayıcı konsolundan `CV.setToken("<jwt>")` veya
+    `?token=<jwt>` query parametresi (localStorage'a yazılır).
 - **Memphis (pilot, Jetson yok):** araçtan video+GPS → merkezi YOLO
   - Admin: `POST /api/edge/devices` (token bir kez)
   - Device: `POST /api/edge/heartbeat`, `POST /api/edge/video` (`file` mp4 + optional `gps` jsonl) + `X-Edge-Token`
@@ -106,6 +114,17 @@ Sadece rapor:
 python scripts/simulate_events_demo.py
 open outputs/simulate_001/report.html
 ```
+
+## Test & lint
+
+```bash
+pytest          # tests/ dizinini toplar; DB kapalıysa PostGIS testleri skip
+ruff check .
+```
+
+DB'ye bağlı testleri gerçekten koşturmak için önce `docker compose up -d db`
+ve `python db/migrate.py`. CI (`.github/workflows/ci.yml`) PostGIS servisiyle
+çalışır ve testler skip'e düşerse job'ı kırar.
 
 ## Human-in-the-loop
 

@@ -6,7 +6,20 @@ from typing import Any, Iterator, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 
-from cityvision.api.deps import get_store, require_admin, require_operator
+from cityvision.api.deps import (
+    Principal,
+    check_media_access,
+    get_principal,
+    get_store,
+    require_admin,
+    require_operator,
+)
+from cityvision.api.media_tokens import (
+    media_resource,
+    media_url,
+    storage_resource,
+    storage_url,
+)
 from cityvision.api.schemas import IngestBody, WorkOrderUpdate, ZonesIngestBody
 from cityvision.config import ROOT
 from cityvision.storage import get_object_store
@@ -21,12 +34,16 @@ def event_media_list(event_id: str) -> list[dict[str, Any]]:
     store = get_store()
     if not store.get_event(event_id):
         raise HTTPException(status_code=404, detail="event not found")
-    rows = store.list_event_media(event_id)
+    return attach_media_urls(store.list_event_media(event_id))
+
+
+def attach_media_urls(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Add a (signed, when auth is on) playable URL to each media row."""
     for r in rows:
         if r.get("object_key"):
-            r["url"] = f"/api/storage/{r['object_key']}"
+            r["url"] = storage_url(str(r["object_key"]))
         elif r.get("id"):
-            r["url"] = f"/api/media/{r['id']}"
+            r["url"] = media_url(int(r["id"]))
     return rows
 
 
@@ -55,7 +72,15 @@ def _stream_object(key: str, content_type: Optional[str] = None) -> StreamingRes
 
 
 @router.get("/media/{media_id}")
-def serve_media(media_id: int):
+def serve_media(
+    media_id: int,
+    principal: Principal = Depends(get_principal),
+    exp: Optional[str] = Query(None),
+    sig: Optional[str] = Query(None),
+):
+    check_media_access(
+        media_resource(media_id), principal=principal, exp=exp, sig=sig
+    )
     row = get_store().get_event_media(media_id)
     if not row:
         raise HTTPException(status_code=404, detail="media not found")
@@ -71,7 +96,15 @@ def serve_media(media_id: int):
 
 
 @router.get("/storage/{key:path}")
-def serve_storage(key: str):
+def serve_storage(
+    key: str,
+    principal: Principal = Depends(get_principal),
+    exp: Optional[str] = Query(None),
+    sig: Optional[str] = Query(None),
+):
+    check_media_access(
+        storage_resource(key), principal=principal, exp=exp, sig=sig
+    )
     obj = get_object_store()
     if isinstance(obj, LocalObjectStore):
         try:

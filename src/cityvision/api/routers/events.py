@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from cityvision.api.deps import (
     Principal,
     get_store,
-    require_admin,
     require_operator,
     resolve_city_id,
 )
@@ -48,7 +47,9 @@ def get_event(event_id: str) -> dict[str, Any]:
     row = store.get_event(event_id)
     if not row:
         raise HTTPException(status_code=404, detail="event not found")
-    row["media"] = store.list_event_media(event_id)
+    from cityvision.api.routers.media_jobs import attach_media_urls
+
+    row["media"] = attach_media_urls(store.list_event_media(event_id))
     row["observations"] = store.list_observations(event_id)
     row["reviews"] = store.list_reviews(event_id=event_id, limit=50)
     return row

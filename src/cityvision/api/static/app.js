@@ -14,8 +14,43 @@
     ).join("");
   }
 
+  // Operator credential. Set once per browser, e.g. from the console:
+  //   CV.setToken("<jwt from POST /api/auth/login>")
+  // Deployments with no API key and no JWT secret need none.
+  const TOKEN_KEY = "cv_token";
+
+  function getToken() {
+    const fromUrl = qs("token");
+    if (fromUrl) {
+      try {
+        localStorage.setItem(TOKEN_KEY, fromUrl);
+      } catch (_) {}
+      return fromUrl;
+    }
+    try {
+      return localStorage.getItem(TOKEN_KEY) || "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function setToken(token) {
+    try {
+      if (token) localStorage.setItem(TOKEN_KEY, token);
+      else localStorage.removeItem(TOKEN_KEY);
+    } catch (_) {}
+  }
+
   async function j(url, opts) {
-    const r = await fetch(url, opts);
+    const options = Object.assign({}, opts);
+    const token = getToken();
+    if (token) {
+      options.headers = Object.assign({}, options.headers, {
+        Authorization: "Bearer " + token,
+      });
+    }
+    const r = await fetch(url, options);
+    if (r.status === 401) throw new Error("Yetki gerekli — CV.setToken(...) ile giriş yapın");
     if (!r.ok) {
       const text = await r.text();
       throw new Error(text || r.statusText);
@@ -79,6 +114,8 @@
   global.CV = {
     mountNav,
     j,
+    getToken,
+    setToken,
     statusColor,
     severityRadius,
     qs,

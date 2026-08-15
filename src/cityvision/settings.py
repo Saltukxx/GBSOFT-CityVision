@@ -60,6 +60,10 @@ class Settings:
         self.s3_region: str = _env("CITYVISION_S3_REGION", "us-east-1") or "us-east-1"
         self.jwt_secret: str = (_env("CITYVISION_JWT_SECRET", "") or "").strip()
         self.jwt_expire_minutes: int = int(_env("CITYVISION_JWT_EXPIRE_MIN", "720") or "720")
+        # Evidence media (frames, crops, clips) is personal data under KVKK.
+        # It is gated as soon as any credential is configured; a bare local
+        # pilot with no API key and no JWT secret stays open as before.
+        self.media_url_ttl_sec: int = int(_env("CITYVISION_MEDIA_URL_TTL_SEC", "3600") or "3600")
         self.webhook_url: str = (_env("CITYVISION_WEBHOOK_URL", "") or "").strip()
         # Cross-run spatial merge radius (meters) when ingesting events
         self.merge_radius_m: float = float(_env("CITYVISION_MERGE_RADIUS_M", "15") or "15")
@@ -98,3 +102,13 @@ class Settings:
             "/report",
             "/api/auth/login",
         )
+
+    @property
+    def auth_configured(self) -> bool:
+        """True when any credential mechanism is set up."""
+        return bool(self.api_key or self.jwt_secret)
+
+    @property
+    def media_url_secret(self) -> str:
+        """Signing key for short-lived evidence media URLs."""
+        return self.jwt_secret or self.api_key
