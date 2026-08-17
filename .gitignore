@@ -43,6 +43,10 @@ data/datasets/model_b/labels/**/*
 !data/datasets/model_b/README.md
 data/datasets/model_b_road/
 data/datasets/model_b_waste/
+data/datasets/model_b_svrdd/**
+!data/datasets/model_b_svrdd/README.md
+data/datasets/model_b_aerial/**
+!data/datasets/model_b_aerial/README.md
 data/raw/rdd2022/
 data/raw/roadeye_hf/
 *.mp4

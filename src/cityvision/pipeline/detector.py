@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Union
 import numpy as np
 
 from cityvision.config import load_class_config, resolve_class_name
+from cityvision.pipeline.model_resolve import ModelBSpec
 from cityvision.pipeline.types import Detection
 
 PathLike = Union[str, Path]
@@ -147,7 +148,9 @@ class DualModelDetector:
     def __init__(
         self,
         model_a: str,
-        model_b: Optional[Union[PathLike, Sequence[PathLike]]] = None,
+        model_b: Optional[
+            Union[PathLike, ModelBSpec, Sequence[Union[PathLike, ModelBSpec]]]
+        ] = None,
         conf: float = 0.35,
         iou: float = 0.45,
         imgsz: int = 640,
@@ -172,22 +175,35 @@ class DualModelDetector:
         )
         self.det_a = YoloDetector(model_path=model_a, model_id="A", **common)
         self.det_b_list: List[YoloDetector] = []
-        b_paths: List[PathLike] = []
+        b_items: List[Union[PathLike, ModelBSpec]] = []
         if model_b is None:
-            b_paths = []
+            b_items = []
         elif isinstance(model_b, (list, tuple)):
-            b_paths = list(model_b)
+            b_items = list(model_b)
         else:
-            b_paths = [model_b]
+            b_items = [model_b]
 
-        for i, path in enumerate(b_paths):
+        self.model_b_paths: List[str] = []
+        for i, item in enumerate(b_items):
+            if isinstance(item, ModelBSpec):
+                path_s = str(item.path)
+                allowed = (
+                    item.allowed_classes
+                    if item.allowed_classes is not None
+                    else allowed_classes
+                )
+            else:
+                path_s = str(item)
+                allowed = allowed_classes
+            kwargs = dict(common)
+            kwargs["allowed_classes"] = allowed
             self.det_b_list.append(
-                YoloDetector(model_path=str(path), model_id=f"B{i}", **common)
+                YoloDetector(model_path=path_s, model_id=f"B{i}", **kwargs)
             )
+            self.model_b_paths.append(path_s)
 
         # backward-compat alias
         self.det_b = self.det_b_list[0] if self.det_b_list else None
-        self.model_b_paths = [str(p) for p in b_paths]
         versions = [self.det_a.model_version] + [d.model_version for d in self.det_b_list]
         self.model_version = "+".join(versions)
 

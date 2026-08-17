@@ -1,9 +1,9 @@
 # Optional per-city overrides merged onto configs/pipeline.yaml at runtime
 run:
-  vehicle_id: BUS-17
+  vehicle_id: DJI-ERZ-01
 events:
   fusion_radius_m: 15
-  # City survey: re-enable waste with high bar + ROI-ish lower frame
+  # City survey: re-enable waste with high bar (no dashcam ROI — aerial default)
   event_classes:
     - pothole
     - road_crack
@@ -16,14 +16,4 @@ events:
     overflowing_container: 0.92
     street_waste: 0.92
   road_roi:
-    enabled: true
-    x_min: 0.12
-    x_max: 0.88
-    y_min: 0.45
-    y_max: 0.98
-    apply_to:
-      - pothole
-      - road_crack
-      - road_damage
-      - overflowing_container
-      - street_waste
+    enabled: false

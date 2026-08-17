@@ -1,0 +1,6 @@
+# Nadir (kuşbakışı) koridor taraması — küçük yüzey kusuru için daha yüksek çözünürlük
+video:
+  stride: 3
+detection:
+  imgsz: 960
+  min_box_area: 150

@@ -5,16 +5,30 @@ import json
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+from cityvision.geo.dji_srt import parse_dji_srt
 from cityvision.pipeline.types import GpsFix
+
+
+def discover_gps_sidecar(source: str | Path) -> Optional[Path]:
+    """Look next to a video for DJI .SRT / .srt (same stem)."""
+    src = Path(source)
+    for ext in (".SRT", ".srt"):
+        cand = src.with_suffix(ext)
+        if cand.is_file():
+            return cand.resolve()
+    return None
 
 
 def load_gps_sidecar(path: str | Path) -> List[GpsFix]:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(path)
-    if path.suffix.lower() == ".jsonl":
+    suffix = path.suffix.lower()
+    if suffix == ".srt":
+        return parse_dji_srt(path)
+    if suffix == ".jsonl":
         return _load_jsonl(path)
-    if path.suffix.lower() == ".json":
+    if suffix == ".json":
         return _load_json(path)
     return _load_csv(path)
 

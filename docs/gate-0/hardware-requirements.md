@@ -1,34 +1,34 @@
 # Hardware Requirements — Pilot
 
-## Edge bilgisayar
+## İşlem
 
 | Aşama | Öneri |
 | ----- | ----- |
-| AR-GE | Laptop (CUDA varsa avantaj) |
-| Saha pilot | NVIDIA Jetson Orin NX (veya başlangıç için Orin Nano) |
+| AR-GE | Laptop (MPS / CUDA) |
+| Saha pilot | Merkezi GPU; Dock/Fly videosu ofiste veya bulutta işlenir |
+| Sonraki faz | Jetson companion (onboard AI yok — MVP) |
 
-## Kamera (araç başı 2 adet)
+## Drone / kamera
 
-| Kamera | Yön | Use-case |
-| ------ | --- | -------- |
-| FRONT | Ön | pothole, road, traffic, crosswalk |
-| RIGHT | Sağ | parking, bus stop, trash, sidewalk, signs |
+| Kaynak | Rol |
+| ------ | --- |
+| DJI Dock + Matrice (4D/4TD) | Tekrarlanabilir waypoint / nadir grid |
+| DJI Fly (pilot) | Alçak eğik inceleme, lab klipleri |
+
+Varsayılan kamera id: `AERIAL`.
 
 ### Minimum özellikler (pilot)
 
 - 1080p@30fps veya üstü  
-- Global / düşük rolling-shutter tercih  
+- Nadir harita + alçak eğik bakış (gimbal)  
 - İyi dinamik aralık (gölge ↔ güneş)  
-- Titreşim dayanımlı montaj  
-- Bilinen FOV / lens (kalibrasyon için)
-
-Production’da tüketici GoPro yerine endüstriyel / otomotiv kamera tercih edilir; pilot’da maliyet için daha esnek olunabilir.
+- DJI SRT veya eşdeğer kare zamanlı GPS  
 
 ## GPS
 
-- 1 Hz veya daha sık NMEA / API  
-- Kamera timestamp ile **zorunlu senkron**  
-- Ideal: aynı edge saati (NTP veya PPS)
+- DJI Fly/Dock **SRT** (videonun yanında `.SRT` / `.srt`)  
+- Yoksa JSONL/CSV sidecar: `timestamp_ms, lat, lon`  
+- Kamera timestamp ile senkron (SRT satır zamanı)
 
 Her frame / event ile:
 
@@ -36,14 +36,16 @@ Her frame / event ile:
 timestamp, lat, lon, speed, heading, camera_id, vehicle_id
 ```
 
+`vehicle_id` drone / dock asset id’sidir (`DJI-01`).
+
 ## Depolama & ağ
 
-- Yerel SSD: ham buffer + evidence clip  
-- 4G/5G: event paketi upload (tam video değil)  
+- Dock/laptop: ham MP4 + SRT  
+- 4G/5G veya ofis ağı: event paketi upload (tam video değil)  
 - Evidence paketi hedefi: `event.jpg` + crop + ~15 sn clip + `event.json`
 
 ## Güç / çevre
 
-- Araç aküsü regüle besleme  
-- Geniş sıcaklık aralığı (Erzurum kışı)  
-- Toz / nem koruması (IP rating hedefi saha sonrası netleşir)
+- Dock şarj + saha elektrik (Dock 3 yedek batarya değiştirmez)  
+- Rüzgâr / yağmur / görüş: DJI kalkış limitleri  
+- SHGM ticari izin; otomasyon yükümlülüğü kaldırmaz

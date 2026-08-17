@@ -56,6 +56,29 @@ RDD2022 denemek için (S3 açıksa):
 python scripts/prepare_rdd2022.py --source rdd --country Czech
 ```
 
+## 0c) SVRDD — çukur + çatlak + rögar
+
+Street-view seti ([SVRDD](https://huggingface.co/datasets/ShuoZheLi/SVRDD_YOLO), CC BY 4.0). RoadEye’ı ezmez; çıktı `data/datasets/model_b_svrdd`.
+
+Eşleme: `pothole` → `pothole`, üç çatlak → `road_crack`, rögar → `manhole`, yama kutuları silinir (görüntü kalır).
+
+```bash
+# Tam set (~8k görüntü, ilk indirme ~4 GB)
+python scripts/prepare_svrdd.py
+
+# Hızlı deneme
+python scripts/prepare_svrdd.py --max-train 800 --max-val 200
+
+python scripts/train_model_b.py \
+  --data configs/model_b_svrdd.data.yaml \
+  --epochs 40 \
+  --device mps \
+  --name train_svrdd \
+  --export-to models/infra-b-road-svrdd.pt
+```
+
+Alttaki Baidu street-view görüntüleri Baidu Maps ToS’a tabidir; ticari ağırlık dağıtmadan önce kontrol edin.
+
 Sonra yerel / CVAT verisiyle fine-tune ederek Türkiye şartlarına uyarlarsın.
 
 ## 0b) Waste bootstrap — GarbageOverflow (Plan A)

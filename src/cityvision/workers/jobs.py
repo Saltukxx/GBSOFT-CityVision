@@ -91,7 +91,7 @@ def _run_analyze_video(store: Store, payload: Dict[str, Any]) -> Dict[str, Any]:
     gps_key = payload.get("gps_object_key")
     city_id = payload.get("city_id")
     vehicle_id = payload.get("vehicle_id")
-    camera_id = payload.get("camera_id") or "FRONT"
+    camera_id = payload.get("camera_id")
     run_name = payload.get("run_name") or upload_id[:12]
 
     store.update_edge_video_upload(upload_id, status="analyzing")

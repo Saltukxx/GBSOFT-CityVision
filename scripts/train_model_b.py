@@ -40,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--patience", type=int, default=20)
+    p.add_argument(
+        "--no-val",
+        action="store_true",
+        help="Skip per-epoch validation (MPS TAL/NMS crash workaround)",
+    )
     return p
 
 
@@ -84,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             workers=args.workers,
             patience=args.patience,
             exist_ok=True,
+            val=not args.no_val,
         )
 
     run_dir = Path(args.project) / args.name
@@ -107,7 +113,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Training finished. Check weights under {run_dir}")
 
     try:
-        metrics = model.val(data=str(train_yaml))
+        val_device = "cpu" if args.no_val and args.device == "mps" else args.device
+        metrics = model.val(data=str(train_yaml), device=val_device)
         maps = getattr(metrics, "box", None)
         if maps is not None:
             print(f"mAP50: {getattr(maps, 'map50', 'n/a')}")

@@ -17,10 +17,25 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--output", required=True, help="Output directory")
     run.add_argument("--model", default=None, help="Model A weights (default from config)")
     run.add_argument("--model-b", default=None, help="Model B infrastructure weights")
-    run.add_argument("--gps", default=None, help="GPS sidecar CSV/JSON/JSONL")
+    run.add_argument(
+        "--gps",
+        default=None,
+        help="GPS sidecar: DJI SRT, CSV, JSON, or JSONL (else look next to --source)",
+    )
     run.add_argument("--zones", default=None, help="GeoJSON zones for geofence")
-    run.add_argument("--vehicle-id", default=None)
+    run.add_argument("--vehicle-id", default=None, help="Asset id (drone/dock); alias of --drone-id")
+    run.add_argument(
+        "--drone-id",
+        default=None,
+        help="Drone / dock asset id (writes vehicle_id)",
+    )
     run.add_argument("--camera-id", default=None)
+    run.add_argument(
+        "--profile",
+        default=None,
+        choices=["nadir", "oblique"],
+        help="Flight profile overlay (default: oblique)",
+    )
     run.add_argument(
         "--city",
         default=None,
@@ -76,31 +91,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
 
     if args.command == "run":
-        from cityvision.config import load_pipeline_config, load_yaml
+        from cityvision.config import DEFAULT_PROFILE, load_pipeline_config
 
         city = args.city
-        if args.config:
-            pipeline_cfg = load_yaml(args.config)
-            if city:
-                # Still merge city overlay on top of explicit base config
-                from cityvision.cities.pack import load_city_pack
-                from cityvision.config import deep_merge
-
-                try:
-                    pack = load_city_pack(city)
-                    if pack.pipeline_overlay:
-                        pipeline_cfg = deep_merge(pipeline_cfg, pack.pipeline_overlay)
-                    run = dict(pipeline_cfg.get("run") or {})
-                    run.setdefault("city_id", pack.city_id)
-                    pipeline_cfg["run"] = run
-                    geo = dict(pipeline_cfg.get("geofence") or {})
-                    if pack.zones_path and not geo.get("path") and not args.zones:
-                        geo["path"] = str(pack.zones_path)
-                    pipeline_cfg["geofence"] = geo
-                except FileNotFoundError:
-                    pass
-        else:
-            pipeline_cfg = load_pipeline_config(city_id=city) if city else None
+        profile = args.profile or DEFAULT_PROFILE
+        pipeline_cfg = load_pipeline_config(
+            path=args.config,
+            city_id=city,
+            profile=profile,
+        )
+        vehicle_id = args.drone_id or args.vehicle_id
 
         out = run_pipeline(
             source=args.source,
@@ -111,12 +111,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             tracking=not args.no_track,
             gps_path=args.gps,
             zones_path=args.zones,
-            vehicle_id=args.vehicle_id,
+            vehicle_id=vehicle_id,
             camera_id=args.camera_id,
             city_id=city,
             start_sec=args.start_sec,
             duration_sec=args.duration,
             stride=args.stride,
+            profile=profile,
         )
         summary_path = Path(out) / "summary.json"
         print(f"Done → {Path(out).resolve()}")

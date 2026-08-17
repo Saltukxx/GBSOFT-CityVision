@@ -54,6 +54,10 @@ classes:
     name: traffic_sign
     coco_name: stop sign  # closest COCO proxy; replace after fine-tune
     model: A
+  - id: 13
+    name: manhole
+    coco_name: null
+    model: B
 
 # When running a COCO checkpoint, only classes with coco_name are emitted.
 bootstrap_coco_only: true
@@ -78,3 +82,11 @@ label_aliases:
   longitudinal_crack: road_crack
   transverse_crack: road_crack
   alligator_crack: road_damage
+  # SVRDD (street-view; patches stay hard-negative)
+  manhole cover: manhole
+  manhole_cover: manhole
+  Manhole: manhole
+  longitudinal patch: null
+  transverse patch: null
+  longitudinal_patch: null
+  transverse_patch: null

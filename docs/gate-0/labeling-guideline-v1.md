@@ -8,7 +8,18 @@ Annotator’lar için kısa kural seti. Şüphede **atlayın** veya `hard_negati
 2. Occlusion > %50 ise yalnızca net sınıf görünüyorsa işaretle.  
 3. Gece / yağmur / kar: aynı kurallar; silüet yeterince net değilse işaretleme.  
 4. Frame aralığı: video’da her frame değil; net görünen keyframeler + track tutarlılığı.  
-5. Asfalt yaması, gölge, rögar, buz birikintisi **pothole değildir**.
+5. Asfalt yaması, gölge, buz birikintisi **pothole değildir**. Rögar kapağı `manhole`.
+
+## Nadir vs eğik kare
+
+Aynı koridor iki bakış üretir; etiket kuralları değişmez, görünürlük değişir.
+
+| Bakış | Ne beklenir | Dikkat |
+| ----- | ----------- | ------ |
+| **Nadir** (kuşbakışı, yüksek) | Sokak geometrisi, büyük yama / açık kavite | Küçük çukur kaybolur; rögar daire gibi görünür |
+| **Eğik / alçak** | Çukur kenarı, çatlak dokusu, taşmış konteyner | Rögar RDD modellerinde `pothole` olur — **her zaman `manhole`** |
+
+Rögar, her iki bakışta da **pothole hard-negative**: kapak görünüyorsa `manhole` kutula, çukur kutusu koyma (kayıp kapak + açık kavite hariç).
 
 ## Sınıf kuralları
 
@@ -22,7 +33,14 @@ Annotator’lar için kısa kural seti. Şüphede **atlayın** veya `hard_negati
 
 - Kavite / malzeme kaybı zorunlu.  
 - Sadece renk farkı veya yama → **etiketleme**.  
+- Rögar kapağı → `manhole`, `pothole` değil.
 - Severity alanını ayrı attribute olarak işaretle (low/medium/high) — CVAT attribute.
+
+### `manhole`
+
+- Yuvarlak / kare kapak, menteşe, ızgara deseni.
+- Kapak çukurun içinde olsa bile baskın nesne kapaksa `manhole`.
+- Kayıp kapak + açık kavite → `pothole` (veya ikisini ayrı kutula).
 
 ### `road_crack` / `road_damage`
 

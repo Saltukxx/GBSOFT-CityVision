@@ -12,6 +12,7 @@ def test_class_config_loads():
     cfg = load_class_config()
     names = [c["name"] for c in cfg["classes"]]
     assert "pothole" in names
+    assert "manhole" in names
     assert "car" in names
 
 
@@ -37,7 +38,32 @@ def test_pipeline_city_overlay_erzurum():
     }
     cfg = load_pipeline_config(city_id="erzurum")
     assert cfg["run"].get("city_id") == "erzurum"
-    assert cfg["run"].get("vehicle_id") == "BUS-17"
+    assert cfg["run"].get("vehicle_id") == "DJI-ERZ-01"
+    assert cfg["events"]["road_roi"]["enabled"] is False
+
+
+def test_pipeline_drone_defaults():
+    cfg = load_pipeline_config()
+    assert cfg["run"]["vehicle_id"] == "DJI-01"
+    assert cfg["run"]["camera_id"] == "AERIAL"
+    assert cfg["traffic"]["enabled"] is False
+    assert cfg["geofence"]["enabled"] is False
+    assert cfg["events"]["road_roi"]["enabled"] is False
+    assert "manhole" not in cfg["events"]["event_classes"]
+
+
+def test_pipeline_profile_overlays():
+    oblique = load_pipeline_config(profile="oblique")
+    assert oblique["video"]["stride"] == 2
+    assert oblique["detection"]["imgsz"] == 640
+    assert oblique["detection"]["min_box_area"] == 400
+    assert oblique["run"]["profile"] == "oblique"
+
+    nadir = load_pipeline_config(profile="nadir")
+    assert nadir["video"]["stride"] == 3
+    assert nadir["detection"]["imgsz"] == 960
+    assert nadir["detection"]["min_box_area"] == 150
+    assert nadir["run"]["profile"] == "nadir"
 
 
 def test_resolve_native_taxonomy_name():
@@ -55,6 +81,7 @@ def test_rdd_label_aliases_map_to_taxonomy():
     assert resolve_class_name("Pothole", cfg, bootstrap_coco_only=False) == "pothole"
     assert resolve_class_name("Other", cfg, bootstrap_coco_only=False) is None
     assert resolve_class_name("D40", cfg, bootstrap_coco_only=False) == "pothole"
+    assert resolve_class_name("manhole cover", cfg, bootstrap_coco_only=False) == "manhole"
     assert resolve_class_name("D20", cfg, bootstrap_coco_only=False) == "road_damage"
     # Alias drop still works under Model A bootstrap mode
     assert resolve_class_name("Other", cfg, bootstrap_coco_only=True) is None

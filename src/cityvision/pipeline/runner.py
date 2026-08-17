@@ -8,15 +8,16 @@ from typing import Any, Dict, List, Optional
 import cv2
 from tqdm import tqdm
 
-from cityvision.config import load_pipeline_config
+from cityvision.config import DEFAULT_PROFILE, load_pipeline_config
 from cityvision.events.engine import EventEngine
 from cityvision.events.evidence import write_evidence_packs
 from cityvision.events.rejected import write_rejected_samples
 from cityvision.geo.geofence import GeofenceEngine, load_zones
-from cityvision.geo.gps import attach_gps_to_detections, load_gps_sidecar
+from cityvision.geo.gps import attach_gps_to_detections, discover_gps_sidecar, load_gps_sidecar
 from cityvision.pipeline.annotate import draw_detections
 from cityvision.pipeline.detector import DualModelDetector
 from cityvision.pipeline.export_json import JsonlWriter
+from cityvision.pipeline.manhole import suppress_potholes_under_manholes
 from cityvision.pipeline.model_resolve import describe_models, resolve_model_b_paths
 from cityvision.pipeline.traffic import TrafficCounter
 from cityvision.pipeline.types import Detection, RunMeta
@@ -39,8 +40,12 @@ def run_pipeline(
     start_sec: Optional[float] = None,
     duration_sec: Optional[float] = None,
     stride: Optional[int] = None,
+    profile: Optional[str] = None,
 ) -> Path:
-    cfg = pipeline_cfg or load_pipeline_config(city_id=city_id)
+    cfg = pipeline_cfg or load_pipeline_config(
+        city_id=city_id,
+        profile=profile if profile is not None else DEFAULT_PROFILE,
+    )
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -69,8 +74,8 @@ def run_pipeline(
     use_tracking = track_cfg.get("enabled", True) if tracking is None else tracking
     tracker_name = track_cfg.get("tracker", "bytetrack.yaml")
 
-    vid = vehicle_id or run_cfg.get("vehicle_id", "BUS-DEMO")
-    cam = camera_id or run_cfg.get("camera_id", "FRONT")
+    vid = vehicle_id or run_cfg.get("vehicle_id", "DJI-01")
+    cam = camera_id or run_cfg.get("camera_id", "AERIAL")
     model_tag = run_cfg.get("model_version_tag", "bootstrap-0.2.0")
 
     detector = DualModelDetector(
@@ -88,6 +93,10 @@ def run_pipeline(
 
     gps_fixes = []
     gps_file = gps_path or gps_cfg.get("path")
+    if not gps_file:
+        sidecar = discover_gps_sidecar(source)
+        if sidecar is not None:
+            gps_file = str(sidecar)
     if gps_cfg.get("enabled", True) and gps_file:
         gps_fixes = load_gps_sidecar(gps_file)
 
@@ -169,6 +178,10 @@ def run_pipeline(
                 batch.timestamp_ms,
                 tracking=use_tracking,
                 tracker=tracker_name,
+            )
+            dets = suppress_potholes_under_manholes(
+                dets,
+                iou_threshold=float(det_cfg.get("manhole_over_pothole_iou", 0.3)),
             )
             for det in dets:
                 det.vehicle_id = vid
@@ -284,6 +297,7 @@ def run_pipeline(
         "vehicle_id": vid,
         "camera_id": cam,
         "city_id": run_cfg.get("city_id") or city_id,
+        "profile": run_cfg.get("profile") or profile,
     }
     if writer:
         writer.write_summary(summary)

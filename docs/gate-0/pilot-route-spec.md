@@ -4,47 +4,46 @@ Durum: taslak — belediye ile doldurulacak.
 
 ## Seçim kriterleri
 
-1. Tek güzergâh, tekrarlanabilir (günde ≥ 4 tur ideal)  
-2. Karışık yüzey: iyi asfalt + yama + bilinen çukurlar  
-3. En az 3–5 otobüs durağı (geofence için)  
-4. Çöp konteyneri koridoru  
-5. Farklı ışık/gölge dilimleri  
+1. İzinli koridor, tekrarlanabilir (nadir grid + alçak doğrulama geçişi)  
+2. Karışık yüzey: iyi asfalt + yama + bilinen çukurlar + rögar  
+3. Çöp konteyneri / atık yığını görülebilir sokak  
+4. Farklı ışık/gölge dilimleri  
+5. Dock menzili ve dönüş yolu net  
 
 ## Şablon
 
 ```text
 City: __________________
-Route name: __________________
+Corridor name: __________________
 Length (km): ______
 Typical duration (min): ______
-Bus IDs: BUS-__ , BUS-__
-Cameras per bus: FRONT + RIGHT
+Drone / Dock IDs: DJI-__
+Profiles: nadir grid + oblique inspect
 Operating hours: __:__ – __:__
 Known pothole count (manual survey): __
 Known overflowing containers: __
-Bus stop zone count (GIS): __
+Manhole hard-negatives in corridor: __
 ```
 
 ## Veri toplama planı (ilk 2 hafta)
 
-| Koşul | Hedef süre |
-| ----- | ---------: |
-| Sabah | ≥ 4 saat |
-| Öğle | ≥ 4 saat |
-| Akşam | ≥ 4 saat |
-| Gece | ≥ 3 saat |
+| Koşul | Hedef |
+| ----- | ----- |
+| Nadir grid | ≥ 4 tekrarlanabilir tarama |
+| Alçak eğik inceleme | Bilinen çukur / rögar noktaları |
+| Sabah / öğle / akşam | En az birer geçiş |
 | Yağmur / ıslak | fırsat oldukça |
-| Kar / çamur (Erzurum) | fırsat oldukça |
 
-Toplam MVP hedefi: **30–50 saat** şehir videosu.
+Toplam MVP hedefi: **tekrarlanabilir koridor** (saat hedefi yerine aynı grid’in tekrarları).
 
 ## GIS hazırlık listesi
 
-- [ ] `bus_stops` polygon  
-- [ ] güzergâh line / corridor  
+- [ ] izinli koridor polygon / no-fly kenarı  
+- [ ] nadir waypoint grid  
 - [ ] bilinen konteyner noktaları (varsa)  
-- [ ] manuel ground-truth çukur listesi (lat/lon)
+- [ ] manuel ground-truth çukur listesi (lat/lon)  
+- [ ] rögar konumları (hard-negative)
 
 ## Pilot süresi
 
-**30 gün** canlı araç + günlük KPI kaydı (`success-metrics.md`).
+**30 gün** Dock/drone koridoru + günlük KPI kaydı (`success-metrics.md`).

@@ -3,32 +3,35 @@
 **Ürün:** GBSoft City Vision  
 **Sürüm:** MVP / Pilot  
 **Süre hedefi:** 24 hafta  
-**Pilot:** 1 belediye · 1 güzergâh · 1–2 otobüs · 2 kamera/araç · 30 gün
+**Pilot:** 1 belediye · 1 izinli koridor · 1 Dock / drone · nadir grid + alçak doğrulama · 30 gün
 
 ## Problem
 
-Belediyeler yol çukuru, çöp taşması, durak işgali ve trafik yoğunluğunu çoğunlukla vatandaş bildirimi veya seyrek saha turu ile öğrenir. Mevcut araç filoları şehirde zaten dolaşır ama görüntü operasyonel olaya dönüşmez.
+Belediyeler yol çukuru, çöp taşması ve yüzey hasarını çoğunlukla vatandaş bildirimi veya seyrek saha turu ile öğrenir. Tek seferlik drone uçuşu kayıt olur ama görüntü operasyonel olaya dönüşmez.
 
 ## Çözüm
 
-Belediye araçlarındaki kamera + GPS + edge AI ile sürekli tarama; cloud’da event fusion; operatöre tekil, doğrulanabilir olay ve iş emri adayı.
+DJI Dock veya DJI Fly ile tekrarlanabilir koridor taraması; merkezi YOLO; cloud’da event fusion; operatöre tekil, doğrulanabilir olay ve iş emri adayı.
 
 ## Değer cümlesi
 
-> Mevcut belediye araçlarınızı şehrin tamamını sürekli tarayan yapay zekâ sensörlerine dönüştürüyoruz.
+> Drone ile tekrarlanabilir koridor taraması; olay = tespit + GPS + fusion + insan onayı.
 
 ## MVP kapsamı (In)
 
-1. **Pothole AI** — çukur / büyük kırık / yüzey deformasyonu  
+1. **Pothole AI** — çukur / büyük kırık / yüzey deformasyonu (rögar iş emri değil)  
 2. **Waste AI** — taşmış konteyner, yol kenarı atık  
-3. **Bus stop obstruction** — *potential* ihlal adayı (ceza değil)  
-4. **Traffic analytics** — sınıf bazlı sayım / yoğunluk KPI  
+3. **Nadir + oblique profiller** — kuşbakışı tarama ve alçak inceleme  
+4. **DJI GPS** — SRT sidecar → harita  
 
 ## Out of scope (MVP)
 
+- Trafik çizgisi / VPH sayımı (motor durur, varsayılan kapalı)  
+- Durak geofence / `potential_bus_stop_obstruction` (motor durur, varsayılan kapalı)  
 - Otomatik trafik cezası / EDS iddiası  
 - Parking / ANPR production  
 - Engelli rampası, tabela, sokak lambası (Phase II+)  
+- DJI Cloud API / Dock MQTT (ayrı entegrasyon)  
 - Tam ERP entegrasyonu  
 
 ## Kullanıcılar
@@ -37,8 +40,7 @@ Belediye araçlarındaki kamera + GPS + edge AI ile sürekli tarama; cloud’da 
 | --- | ------- |
 | Operatör | Haritada olayları incele, doğru/yanlış işaretle |
 | Fen İşleri / Temizlik | İş emri adayı al |
-| Zabıta | Durak işgali adayını incele |
-| Ürün / Admin | Model versiyonu, pilot KPI |
+| Ürün / Admin | Model versiyonu, uçuş profili, pilot KPI |
 
 ## İlk demo ekranları (zorunlu dört)
 
@@ -52,16 +54,16 @@ Belediye araçlarındaki kamera + GPS + edge AI ile sürekli tarama; cloud’da 
 - Privacy by design: mümkün olduğunca event crop + kısa kanıt kliniği  
 - Her event’te `model_version`  
 - Human-in-the-loop zorunlu (ilk üretim)  
-- Edge-first tercih (Jetson pilotu sonraki faz)
+- Merkezi GPU (Jetson onboard sonraki faz)
 
 ## Başarı (özet)
 
 Detay: `success-metrics.md`  
-Operasyonel ana KPI: **false events per route**.
+Operasyonel ana KPI: **false events per corridor**.
 
 ## Bağımlılıklar
 
-- Pilot güzergâh ve araç erişimi  
-- CVAT + labeling ekibi / süresi  
-- Kamera + GPS senkronu  
+- İzinli koridor ve Dock/drone erişimi  
+- CVAT + labeling ekibi / süresi (nadir + eğik kare, rögar hard-negative)  
+- DJI SRT veya eşdeğer GPS  
 - Model stack lisans kararı (MVP sonu gate)

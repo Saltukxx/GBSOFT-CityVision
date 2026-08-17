@@ -26,6 +26,7 @@ AI önce **görsel sınıf** üretir. Belediye olayı (violation / work order) A
 | `pothole` | Yol çukuru | bbox veya mask | Evet |
 | `road_crack` | Belirgin asfalt çatlağı / kırık | bbox veya mask | Evet |
 | `road_damage` | Genel yüzey deformasyonu (çukur değil) | mask tercih | Evet |
+| `manhole` | Rögar kapağı (çukur değil; **iş emri değil**) | bbox | Görsel evet / event hayır |
 | `overflowing_container` | Taşmış konteyner | bbox | Evet |
 | `street_waste` | Yol/kaldırımda atık yığını | bbox | Evet |
 
@@ -36,7 +37,7 @@ AI önce **görsel sınıf** üretir. Belediye olayı (violation / work order) A
 ```text
 Class: pothole
 Positive: asfaltta çukur, malzeme kaybı, kenarı belirgin kavite
-Negative: asfalt yaması, gölge, eriyen kar birikintisi, rögar kapağı, hız kesici
+Negative: asfalt yaması, gölge, eriyen kar birikintisi, rögar kapağı (`manhole`), hız kesici
 Minimum visible size: frame genişliğinin ~0.5%+ (pilot sonrası kalibre)
 Occlusion: >50% kapalıysa label opsiyonel / low confidence
 Severity:
@@ -44,6 +45,17 @@ Severity:
   medium — belirgin kavite
   high   — geniş/derin, araç hasarı riski
 Required confidence (event): >= 0.85 (ilk varsayılan)
+```
+
+### `manhole`
+
+```text
+Class: manhole
+Positive: yol yüzeyindeki rögar / menhol kapağı (yuvarlak veya kare)
+Negative: çukur (kavite), asfalt yaması, hız kesici
+Note: çukur ile karışmasın diye ayrı sınıf; sağlam kapak iş emri değildir.
+Pipeline: manhole kutusu annotated videoda durur; event_classes içinde yoktur.
+Pothole ile IoU örtüşürse pothole düşer (rögar çukur yazmasın).
 ```
 
 ### `overflowing_container`
@@ -62,12 +74,13 @@ Positive: yol kenarı / kaldırımda birikmiş atık yığını
 Negative: tek yaprak, küçük ambalaj (min size kalibre edilecek)
 ```
 
-### Bus stop obstruction (event, class değil)
+### Bus stop obstruction (event, class değil — MVP kapalı)
 
 ```text
 AI üretir: car|bus|truck|motorcycle (+ track)
 GIS üretir: vehicle_position ∈ BUS_STOP_zone
 Event: potential_bus_stop_obstruction
+Motor durur; geofence varsayılan kapalı. Drone durak işgali MVP değil.
 İlk sürüm otomatik ceza DEĞİL.
 ```
 
@@ -85,6 +98,7 @@ street_waste
 pothole
 road_crack
 road_damage
+manhole
 bus_stop
 traffic_sign
 ```

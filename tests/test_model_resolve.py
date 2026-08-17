@@ -1,5 +1,5 @@
 
-from cityvision.config import ROOT
+from cityvision.config import ROOT, load_pipeline_config
 from cityvision.pipeline.model_resolve import resolve_model_b_paths
 
 
@@ -39,3 +39,28 @@ def test_fallback_used_until_export_exists():
         assert "best.pt" not in names
     elif waste_best.exists():
         assert "best.pt" in names
+
+
+def test_model_b_list_dict_allowed_classes(tmp_path):
+    fake = tmp_path / "manhole-only.pt"
+    fake.write_bytes(b"pt")
+    cfg = {
+        "model_b_list": [
+            {"path": str(fake), "allowed_classes": ["manhole"]},
+        ],
+        "auto_discover_model_b": False,
+        "model_b_fallbacks": [],
+    }
+    specs = resolve_model_b_paths(cfg)
+    assert len(specs) == 1
+    assert specs[0].name == "manhole-only.pt"
+    assert specs[0].allowed_classes == ("manhole",)
+
+
+def test_default_svrdd_is_manhole_only():
+    cfg = load_pipeline_config()
+    specs = resolve_model_b_paths(cfg["detection"])
+    svrdd = [s for s in specs if "svrdd" in s.name.lower()]
+    if not svrdd:
+        return
+    assert svrdd[0].allowed_classes == ("manhole",)

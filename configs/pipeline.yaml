@@ -11,7 +11,15 @@ detection:
   model_b_list:
     # RDD road distress (vinothvikas1987/pothole-detection-yolov8) — label_aliases in classes.yaml
     - models/infra-b-road-rdd.pt
+    # DJI-marked aerial (manhole / crack / damage) — skipped until train_aerial exports
+    - path: models/infra-b-road-aerial.pt
+      allowed_classes: [pothole, manhole, road_crack, road_damage]
+    # SVRDD manhole-only — boxes on HUD, not work orders; suppresses overlapping potholes
+    - path: models/infra-b-road-svrdd.pt
+      allowed_classes: [manhole]
     - models/infra-b-waste.pt
+  # Drop pothole boxes that overlap a manhole (IoU)
+  manhole_over_pothole_iou: 0.3
   # Keep legacy RoadEye-only pothole weights discoverable but not primary
   # models/infra-b-road.pt
   # legacy single field still supported
@@ -36,12 +44,12 @@ tracking:
 
 gps:
   enabled: true
-  # Sidecar file: CSV with timestamp_ms|iso, lat, lon, speed, heading
+  # Sidecar: DJI .SRT (auto next to video) or CSV/JSON/JSONL timestamp_ms, lat, lon
   path: null
   max_interp_gap_ms: 2000
 
 geofence:
-  enabled: true
+  enabled: false
   # GeoJSON FeatureCollection of Polygon zones
   path: null
   vehicle_classes: [car, bus, truck, motorcycle]
@@ -49,7 +57,7 @@ geofence:
   min_dwell_frames: 3
 
 traffic:
-  enabled: true
+  enabled: false
   # Horizontal count line as ratio of frame height (0–1)
   line_y_ratio: 0.55
   vehicle_classes: [car, bus, truck, motorcycle]
@@ -71,15 +79,15 @@ events:
   # Do not emit low-confidence municipal events
   drop_confidence_bands: [discard]
   class_min_confidence:
-    pothole: 0.72
+    pothole: 0.40
     road_crack: 0.72
     road_damage: 0.72
     # Waste stays on, but needs a high bar (cars were FP on highway)
     overflowing_container: 0.92
     street_waste: 0.92
-  # Front-camera road surface band (normalized bbox center)
+  # Aerial: dashcam lower-frame ROI would clip the wrong region
   road_roi:
-    enabled: true
+    enabled: false
     x_min: 0.12
     x_max: 0.88
     y_min: 0.42
@@ -95,7 +103,7 @@ events:
 
 confidence:
   bands:
-    discard: 0.70
+    discard: 0.40
     review: 0.85
     probable: 0.95
   repeat_bonus: 0.10
@@ -123,6 +131,6 @@ export:
   report_name: report.html
 
 run:
-  vehicle_id: BUS-DEMO
-  camera_id: FRONT
+  vehicle_id: DJI-01
+  camera_id: AERIAL
   model_version_tag: bootstrap-0.2.0

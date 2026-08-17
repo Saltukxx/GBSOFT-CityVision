@@ -1,0 +1,6 @@
+# Alçak eğik inceleme — çukur/çatlak için gerçekçi domain (CLI varsayılanı)
+video:
+  stride: 2
+detection:
+  imgsz: 640
+  min_box_area: 400

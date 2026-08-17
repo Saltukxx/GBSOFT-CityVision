@@ -37,15 +37,42 @@ def load_class_config(path: Path | str | None = None) -> dict[str, Any]:
     return load_yaml(path or DEFAULT_CLASSES)
 
 
+DEFAULT_PROFILE = "oblique"
+PROFILE_DIR = ROOT / "configs" / "profiles"
+
+
+def load_profile_overlay(profile: str) -> dict[str, Any]:
+    """Load configs/profiles/<profile>.yaml (nadir | oblique)."""
+    name = str(profile).strip()
+    if not name:
+        raise ValueError("pipeline profile name is empty")
+    overlay_path = PROFILE_DIR / f"{name}.yaml"
+    if not overlay_path.is_file():
+        known = sorted(p.stem for p in PROFILE_DIR.glob("*.yaml"))
+        raise FileNotFoundError(
+            f"Unknown pipeline profile {name!r} ({overlay_path}). Known: {known}"
+        )
+    return load_yaml(overlay_path)
+
+
 def load_pipeline_config(
     path: Path | str | None = None,
     *,
     city_id: Optional[str] = None,
+    profile: Optional[str] = None,
 ) -> dict[str, Any]:
     """
-    Load pipeline.yaml, optionally merged with configs/cities/<city_id>/pipeline.overlay.yaml.
+    Load pipeline.yaml, optionally merged with a flight profile then
+    configs/cities/<city_id>/pipeline.overlay.yaml.
+
+    Merge order: base → profile → city overlay.
     """
     cfg = load_yaml(path or DEFAULT_PIPELINE)
+    if profile:
+        cfg = deep_merge(cfg, load_profile_overlay(profile))
+        run_stamp = dict(cfg.get("run") or {})
+        run_stamp["profile"] = str(profile).strip()
+        cfg["run"] = run_stamp
     if not city_id:
         return cfg
     try:

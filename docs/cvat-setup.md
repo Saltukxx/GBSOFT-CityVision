@@ -37,6 +37,7 @@ Yeni project → Labels (sıra önemli — YOLO id ile aynı):
 | 2 | pothole |
 | 3 | road_crack |
 | 4 | road_damage |
+| 5 | manhole |
 
 Tip: **Rectangle** (bbox).
 

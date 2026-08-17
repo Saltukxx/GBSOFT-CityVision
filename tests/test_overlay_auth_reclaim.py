@@ -41,7 +41,8 @@ def test_deep_merge_and_city_overlay():
 
     cfg = load_pipeline_config(city_id="erzurum")
     assert cfg["run"]["city_id"] == "erzurum"
-    assert cfg["run"]["vehicle_id"] == "BUS-17"  # from overlay
+    assert cfg["run"]["vehicle_id"] == "DJI-ERZ-01"  # from overlay
+    assert cfg["events"]["road_roi"]["enabled"] is False
     assert "geofence" in cfg
     assert cfg["geofence"].get("path")
 

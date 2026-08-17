@@ -2,6 +2,8 @@
 
 Detection ≠ Event. Event, tekrarlayan gözlemler ve kurallar sonrası oluşan operasyonel kayıttır.
 
+`manhole` görsel sınıftır: kanıt kutusunda görünebilir, **iş emri / event değildir**.
+
 ## Event tipleri
 
 | event_type | Kaynak | Birim | MVP |
@@ -10,8 +12,8 @@ Detection ≠ Event. Event, tekrarlayan gözlemler ve kurallar sonrası oluşan 
 | `road_damage` | Model B + fusion | Fen İşleri | Evet |
 | `overflowing_container` | Model B + fusion | Temizlik | Evet |
 | `street_waste` | Model B + fusion | Temizlik | Evet |
-| `potential_bus_stop_obstruction` | Vehicle det + GIS geofence | Zabıta | Evet |
-| `traffic_density` | Tracking KPI (segment) | Ulaşım | Evet (analytics) |
+| `potential_bus_stop_obstruction` | Vehicle det + GIS geofence | Zabıta | Motor var, **MVP kapalı** |
+| `traffic_density` | Tracking KPI (segment) | Ulaşım | Motor var, **MVP kapalı** |
 
 ## Ortak event şeması
 
@@ -28,10 +30,12 @@ Detection ≠ Event. Event, tekrarlayan gözlemler ve kurallar sonrası oluşan 
   "observations": 4,
   "status": "open",
   "model_version": "pothole-0.1.0",
-  "vehicle_ids": ["BUS-17"],
-  "camera_ids": ["FRONT"]
+  "vehicle_ids": ["DJI-01"],
+  "camera_ids": ["AERIAL"]
 }
 ```
+
+`vehicle_id` / `vehicle_ids` asset anahtarıdır (drone / dock id).
 
 ## Severity
 
