@@ -30,6 +30,9 @@ def main() -> int:
     print("Connecting… host from URL (password hidden)")
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
+            # RLS (010) FORCE-s policies; re-applying earlier files needs the
+            # session-wide bypass so UPDATE/INSERT in those scripts still match.
+            cur.execute("SELECT set_config('app.current_city_id', '*', false)")
             for sql_path in sorted(INIT_DIR.glob("*.sql")):
                 print(f"Applying {sql_path.name}")
                 cur.execute(sql_path.read_text(encoding="utf-8"))

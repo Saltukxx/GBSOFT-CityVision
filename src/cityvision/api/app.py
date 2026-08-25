@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from cityvision.api.auth import ApiKeyMiddleware
+from cityvision.api.auth import ApiKeyMiddleware, TenantMiddleware
+from cityvision.api.deps import bind_tenant
 from cityvision.api.routers import (
     auth_export,
     edge,
@@ -25,8 +26,12 @@ app = FastAPI(
     title="GBSoft City Vision API",
     version="0.9.0",
     description="Municipal event backend (PostGIS, city packs, RBAC, edge upload, transactional ingest)",
+    dependencies=[Depends(bind_tenant)],
 )
 
+# Last added runs first. ApiKeyMiddleware is outer; TenantMiddleware sees
+# requests that already passed the API-key / JWT gate.
+app.add_middleware(TenantMiddleware)
 app.add_middleware(ApiKeyMiddleware)
 
 app.include_router(health.router)

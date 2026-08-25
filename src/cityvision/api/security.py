@@ -32,7 +32,12 @@ def verify_password(password: str, encoded: str) -> bool:
         return False
 
 
-def create_access_token(username: str, role: str, expires_minutes: int = 60 * 12) -> str:
+def create_access_token(
+    username: str,
+    role: str,
+    city_id: Optional[str] = None,
+    expires_minutes: int = 60 * 12,
+) -> str:
     import jwt
 
     settings = get_settings()
@@ -46,6 +51,8 @@ def create_access_token(username: str, role: str, expires_minutes: int = 60 * 12
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=expires_minutes)).timestamp()),
     }
+    if city_id:
+        payload["city_id"] = city_id
     return jwt.encode(payload, secret, algorithm="HS256")
 
 

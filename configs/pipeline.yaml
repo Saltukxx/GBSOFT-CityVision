@@ -9,8 +9,9 @@ detection:
   model_a: yolov8n.pt
   # Model B list — missing files are skipped; appear automatically when exported
   model_b_list:
-    # RDD road distress (vinothvikas1987/pothole-detection-yolov8) — label_aliases in classes.yaml
-    - models/infra-b-road-rdd.pt
+    # RDD dashcam distress — no pothole (covers were D40); aerial owns pothole/manhole
+    - path: models/infra-b-road-rdd.pt
+      allowed_classes: [road_crack, road_damage]
     # DJI-marked aerial (manhole / crack / damage) — skipped until train_aerial exports
     - path: models/infra-b-road-aerial.pt
       allowed_classes: [pothole, manhole, road_crack, road_damage]
@@ -18,8 +19,11 @@ detection:
     - path: models/infra-b-road-svrdd.pt
       allowed_classes: [manhole]
     - models/infra-b-waste.pt
-  # Drop pothole boxes that overlap a manhole (IoU)
-  manhole_over_pothole_iou: 0.3
+  # Drop pothole/road_damage boxes that sit on a manhole (IoU or containment)
+  manhole_over_pothole_iou: 0.15
+  manhole_over_distress_classes: [pothole, road_damage]
+  # Same-patch pothole vs road_damage: keep the higher-confidence box
+  distress_nms_iou: 0.3
   # Keep legacy RoadEye-only pothole weights discoverable but not primary
   # models/infra-b-road.pt
   # legacy single field still supported

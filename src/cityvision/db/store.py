@@ -9,6 +9,15 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from cityvision.settings import get_settings
+from cityvision.tenant import TENANT_ALL, get_tenant_city
+
+
+class UsernameConflict(Exception):
+    """Raised when INSERT would collide with a username in another tenant."""
+
+    def __init__(self, username: str):
+        self.username = username
+        super().__init__(username)
 
 
 def database_url() -> str:
@@ -21,6 +30,14 @@ class Store:
     def __init__(self, dsn: str | None = None):
         self.dsn = dsn or database_url()
         self._tx_conn: Optional[psycopg.Connection] = None
+
+    def _apply_tenant(self, conn: psycopg.Connection) -> None:
+        """SET LOCAL app.current_city_id for RLS. Unset context → '*' (system path)."""
+        city = get_tenant_city()
+        if city is None:
+            city = TENANT_ALL
+        with conn.cursor() as cur:
+            cur.execute("SELECT set_config('app.current_city_id', %s, true)", (city,))
 
     def _commit(self, conn: psycopg.Connection) -> None:
         """Commit unless an outer transaction() owns the connection."""
@@ -35,6 +52,7 @@ class Store:
             yield self
             return
         with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
+            self._apply_tenant(conn)
             self._tx_conn = conn
             try:
                 yield self
@@ -51,6 +69,7 @@ class Store:
             yield self._tx_conn
             return
         with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
+            self._apply_tenant(conn)
             yield conn
 
     def ping(self) -> bool:
@@ -645,8 +664,11 @@ class Store:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, event_id, unit, note, status, assignee, created_at, updated_at
-                    FROM work_orders WHERE id = %s
+                    SELECT wo.id, wo.event_id, wo.unit, wo.note, wo.status, wo.assignee,
+                           wo.created_at, wo.updated_at, e.city_id
+                    FROM work_orders wo
+                    JOIN events e ON e.event_id = wo.event_id
+                    WHERE wo.id = %s
                     """,
                     (work_order_id,),
                 )
@@ -699,10 +721,13 @@ class Store:
                 )
                 today_total = cur.fetchone()["c"]
                 cur.execute(
-                    """
-                    SELECT COUNT(*) AS c FROM work_orders
-                    WHERE status NOT IN ('resolved', 'cancelled')
-                    """
+                    f"""
+                    SELECT COUNT(*) AS c FROM work_orders wo
+                    JOIN events e ON e.event_id = wo.event_id
+                    WHERE wo.status NOT IN ('resolved', 'cancelled')
+                    {city_clause.replace('city_id', 'e.city_id') if city_clause else ''}
+                    """,
+                    city_args,
                 )
                 open_wo = cur.fetchone()["c"]
         out = {
@@ -718,16 +743,23 @@ class Store:
             out["city_id"] = city_id
         return out
 
-    def list_runs(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def list_runs(self, limit: int = 50, city_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        clauses = ["1=1"]
+        args: List[Any] = []
+        if city_id:
+            clauses.append("city_id = %s")
+            args.append(city_id)
+        args.append(limit)
+        sql = f"""
+            SELECT id, run_dir, source, vehicle_id, camera_id, model_a, model_b,
+                   city_id, created_at
+            FROM runs
+            WHERE {' AND '.join(clauses)}
+            ORDER BY id DESC LIMIT %s
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, run_dir, source, vehicle_id, camera_id, model_a, model_b, created_at
-                    FROM runs ORDER BY id DESC LIMIT %s
-                    """,
-                    (limit,),
-                )
+                cur.execute(sql, args)
                 rows = cur.fetchall()
         return [_serialize_row(r) for r in rows]
 
@@ -745,14 +777,24 @@ class Store:
         return _serialize_row(row) if row else None
 
     def events_near(
-        self, lat: float, lon: float, radius_m: float = 50.0, limit: int = 50
+        self,
+        lat: float,
+        lon: float,
+        radius_m: float = 50.0,
+        limit: int = 50,
+        city_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """PostGIS spatial lookup around a point."""
+        city_clause = " AND city_id = %s" if city_id else ""
+        args: List[Any] = [lon, lat, lon, lat, radius_m]
+        if city_id:
+            args.append(city_id)
+        args.append(limit)
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
-                    SELECT event_id, type, lat, lon, status, confidence,
+                    f"""
+                    SELECT event_id, type, lat, lon, status, confidence, city_id,
                            ST_Distance(
                              geom,
                              ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
@@ -764,10 +806,11 @@ class Store:
                             ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
                             %s
                           )
+                      {city_clause}
                     ORDER BY distance_m
                     LIMIT %s
                     """,
-                    (lon, lat, lon, lat, radius_m, limit),
+                    args,
                 )
                 rows = cur.fetchall()
         return [_serialize_row(r) for r in rows]
@@ -861,20 +904,28 @@ class Store:
             )
         return {"type": "FeatureCollection", "features": features}
 
-    def events_in_zone(self, zone_id: str, limit: int = 200) -> List[Dict[str, Any]]:
+    def events_in_zone(
+        self, zone_id: str, limit: int = 200, city_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        city_clause = " AND e.city_id = %s AND z.city_id = %s" if city_id else ""
+        args: List[Any] = [zone_id]
+        if city_id:
+            args.extend([city_id, city_id])
+        args.append(limit)
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
-                    SELECT e.event_id, e.type, e.lat, e.lon, e.status, e.confidence, e.zone_id
+                    f"""
+                    SELECT e.event_id, e.type, e.lat, e.lon, e.status, e.confidence, e.zone_id, e.city_id
                     FROM events e
                     JOIN zones z ON z.zone_id = %s
                     WHERE e.geom IS NOT NULL
                       AND ST_Within(e.geom::geometry, z.geom::geometry)
+                      {city_clause}
                     ORDER BY e.updated_at DESC
                     LIMIT %s
                     """,
-                    (zone_id, limit),
+                    args,
                 )
                 rows = cur.fetchall()
         return [_serialize_row(r) for r in rows]
@@ -951,18 +1002,27 @@ class Store:
         )
         return out
 
-    def list_reviews(self, event_id: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+    def list_reviews(
+        self,
+        event_id: Optional[str] = None,
+        limit: int = 100,
+        city_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         clauses = ["1=1"]
         args: List[Any] = []
         if event_id:
-            clauses.append("event_id = %s")
+            clauses.append("r.event_id = %s")
             args.append(event_id)
+        if city_id:
+            clauses.append("e.city_id = %s")
+            args.append(city_id)
         args.append(limit)
         sql = f"""
-            SELECT id, event_id, label, note, reviewer, source, created_at
-            FROM review_feedback
+            SELECT r.id, r.event_id, r.label, r.note, r.reviewer, r.source, r.created_at, e.city_id
+            FROM review_feedback r
+            JOIN events e ON e.event_id = r.event_id
             WHERE {' AND '.join(clauses)}
-            ORDER BY created_at DESC
+            ORDER BY r.created_at DESC
             LIMIT %s
         """
         with self.connect() as conn:
@@ -1073,61 +1133,87 @@ class Store:
             self._commit(conn)
             return str(row["id"])
 
-    def list_vehicles(self) -> List[Dict[str, Any]]:
+    def list_vehicles(self, city_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        clauses = ["1=1"]
+        args: List[Any] = []
+        if city_id:
+            clauses.append("city_id = %s")
+            args.append(city_id)
+        sql = f"""
+            SELECT id, name, plate, route_id, city_id, active, props, created_at
+            FROM vehicles
+            WHERE {' AND '.join(clauses)}
+            ORDER BY id
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, name, plate, route_id, city_id, active, props, created_at
-                    FROM vehicles ORDER BY id
-                    """
-                )
+                cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
 
-    def list_cameras(self, vehicle_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_cameras(
+        self, vehicle_id: Optional[str] = None, city_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        clauses = ["1=1"]
+        args: List[Any] = []
+        if vehicle_id:
+            clauses.append("c.vehicle_id = %s")
+            args.append(vehicle_id)
+        if city_id:
+            clauses.append("v.city_id = %s")
+            args.append(city_id)
+        sql = f"""
+            SELECT c.id, c.vehicle_id, c.label, c.facing, c.active, c.props, c.created_at,
+                   v.city_id
+            FROM cameras c
+            LEFT JOIN vehicles v ON v.id = c.vehicle_id
+            WHERE {' AND '.join(clauses)}
+            ORDER BY c.id
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
-                if vehicle_id:
-                    cur.execute(
-                        """
-                        SELECT id, vehicle_id, label, facing, active, props, created_at
-                        FROM cameras WHERE vehicle_id = %s ORDER BY id
-                        """,
-                        (vehicle_id,),
-                    )
-                else:
-                    cur.execute(
-                        """
-                        SELECT id, vehicle_id, label, facing, active, props, created_at
-                        FROM cameras ORDER BY id
-                        """
-                    )
+                cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
 
-    def list_routes(self) -> List[Dict[str, Any]]:
+    def list_routes(self, city_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        clauses = ["1=1"]
+        args: List[Any] = []
+        if city_id:
+            clauses.append("(city_id = %s OR city = %s)")
+            args.extend([city_id, city_id])
+        sql = f"""
+            SELECT id, name, city, city_id, props, created_at,
+                   ST_AsGeoJSON(geom::geometry)::json AS geometry
+            FROM routes
+            WHERE {' AND '.join(clauses)}
+            ORDER BY id
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, name, city, city_id, props, created_at,
-                           ST_AsGeoJSON(geom::geometry)::json AS geometry
-                    FROM routes ORDER BY id
-                    """
-                )
+                cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
 
-    def list_work_orders(self, status: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+    def list_work_orders(
+        self,
+        status: Optional[str] = None,
+        limit: int = 100,
+        city_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         clauses = ["1=1"]
         args: List[Any] = []
         if status:
-            clauses.append("status = %s")
+            clauses.append("wo.status = %s")
             args.append(status)
+        if city_id:
+            clauses.append("e.city_id = %s")
+            args.append(city_id)
         args.append(limit)
         sql = f"""
-            SELECT id, event_id, unit, note, status, assignee, created_at, updated_at
-            FROM work_orders
+            SELECT wo.id, wo.event_id, wo.unit, wo.note, wo.status, wo.assignee,
+                   wo.created_at, wo.updated_at, e.city_id
+            FROM work_orders wo
+            JOIN events e ON e.event_id = wo.event_id
             WHERE {' AND '.join(clauses)}
-            ORDER BY created_at DESC
+            ORDER BY wo.created_at DESC
             LIMIT %s
         """
         with self.connect() as conn:
@@ -1233,8 +1319,11 @@ class Store:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, event_id, media_type, path, content_type, bytes, object_key, created_at
-                    FROM event_media WHERE event_id = %s ORDER BY id
+                    SELECT m.id, m.event_id, m.media_type, m.path, m.content_type,
+                           m.bytes, m.object_key, m.created_at, e.city_id
+                    FROM event_media m
+                    JOIN events e ON e.event_id = m.event_id
+                    WHERE m.event_id = %s ORDER BY m.id
                     """,
                     (event_id,),
                 )
@@ -1245,10 +1334,42 @@ class Store:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, event_id, media_type, path, content_type, bytes, object_key, created_at
-                    FROM event_media WHERE id = %s
+                    SELECT m.id, m.event_id, m.media_type, m.path, m.content_type,
+                           m.bytes, m.object_key, m.created_at, e.city_id
+                    FROM event_media m
+                    JOIN events e ON e.event_id = m.event_id
+                    WHERE m.id = %s
                     """,
                     (media_id,),
+                )
+                row = cur.fetchone()
+        return _serialize_row(row) if row else None
+
+    def lookup_storage_key(self, key: str) -> Optional[Dict[str, Any]]:
+        """Map an object-store key to a city-scoped row, if any."""
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT m.id, m.event_id, m.object_key, e.city_id
+                    FROM event_media m
+                    JOIN events e ON e.event_id = m.event_id
+                    WHERE m.object_key = %s
+                    LIMIT 1
+                    """,
+                    (key,),
+                )
+                row = cur.fetchone()
+                if row:
+                    return _serialize_row(row)
+                cur.execute(
+                    """
+                    SELECT upload_id, object_key, gps_object_key, city_id
+                    FROM edge_video_uploads
+                    WHERE object_key = %s OR gps_object_key = %s
+                    LIMIT 1
+                    """,
+                    (key, key),
                 )
                 row = cur.fetchone()
         return _serialize_row(row) if row else None
@@ -1256,7 +1377,17 @@ class Store:
     def create_job(self, job_type: str, payload: Dict[str, Any]) -> int:
         from cityvision.settings import get_settings
 
-        city_id = payload.get("city_id") or get_settings().default_city
+        payload = dict(payload)
+        city_id = payload.get("city_id")
+        tenant = get_tenant_city()
+        if not city_id:
+            if tenant and tenant != TENANT_ALL:
+                city_id = tenant
+            else:
+                city_id = get_settings().default_city
+        elif tenant and tenant != TENANT_ALL and str(city_id) != str(tenant):
+            raise ValueError("job city_id does not match current tenant")
+        payload["city_id"] = city_id
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -1314,7 +1445,7 @@ class Store:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, job_type, status, payload, result, error,
+                    SELECT id, job_type, status, payload, result, error, city_id,
                            created_at, started_at, finished_at
                     FROM jobs WHERE id = %s
                     """,
@@ -1323,17 +1454,23 @@ class Store:
                 row = cur.fetchone()
         return _serialize_row(row) if row else None
 
-    def list_jobs(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def list_jobs(self, limit: int = 50, city_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        clauses = ["1=1"]
+        args: List[Any] = []
+        if city_id:
+            clauses.append("city_id = %s")
+            args.append(city_id)
+        args.append(limit)
+        sql = f"""
+            SELECT id, job_type, status, payload, result, error, city_id,
+                   created_at, started_at, finished_at
+            FROM jobs
+            WHERE {' AND '.join(clauses)}
+            ORDER BY id DESC LIMIT %s
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, job_type, status, payload, result, error,
-                           created_at, started_at, finished_at
-                    FROM jobs ORDER BY id DESC LIMIT %s
-                    """,
-                    (limit,),
-                )
+                cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
 
     def claim_job(self, job_id: int) -> bool:
@@ -1410,36 +1547,66 @@ class Store:
         display_name: str = "",
         role: str = "operator",
         password_hash: Optional[str] = None,
+        city_id: Optional[str] = None,
     ) -> int:
+        from psycopg.errors import IntegrityError, UniqueViolation
+
+        from cityvision.settings import get_settings
+
+        cid = city_id
+        if role != "superadmin" and not cid:
+            cid = get_settings().default_city
+        if role == "superadmin":
+            cid = None
+        tenant = get_tenant_city()
+        if tenant and tenant != TENANT_ALL and cid and str(cid) != str(tenant):
+            raise ValueError("user city_id does not match current tenant")
         with self.connect() as conn:
-            with conn.cursor() as cur:
-                if password_hash is not None:
-                    cur.execute(
-                        """
-                        INSERT INTO users (username, display_name, role, password_hash)
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT (username) DO UPDATE SET
-                          display_name = EXCLUDED.display_name,
-                          role = EXCLUDED.role,
-                          password_hash = EXCLUDED.password_hash
-                        RETURNING id
-                        """,
-                        (username, display_name or username, role, password_hash),
-                    )
-                else:
-                    cur.execute(
-                        """
-                        INSERT INTO users (username, display_name, role)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (username) DO UPDATE SET
-                          display_name = EXCLUDED.display_name,
-                          role = EXCLUDED.role
-                        RETURNING id
-                        """,
-                        (username, display_name or username, role),
-                    )
-                row = cur.fetchone()
-            self._commit(conn)
+            try:
+                with conn.cursor() as cur:
+                    if password_hash is not None:
+                        cur.execute(
+                            """
+                            INSERT INTO users (username, display_name, role, password_hash, city_id)
+                            VALUES (%s, %s, %s, %s, %s)
+                            ON CONFLICT (username) DO UPDATE SET
+                              display_name = EXCLUDED.display_name,
+                              role = EXCLUDED.role,
+                              password_hash = EXCLUDED.password_hash,
+                              city_id = CASE
+                                WHEN current_setting('app.current_city_id', true) = '*'
+                                THEN EXCLUDED.city_id
+                                ELSE users.city_id
+                              END
+                            RETURNING id
+                            """,
+                            (username, display_name or username, role, password_hash, cid),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            INSERT INTO users (username, display_name, role, city_id)
+                            VALUES (%s, %s, %s, %s)
+                            ON CONFLICT (username) DO UPDATE SET
+                              display_name = EXCLUDED.display_name,
+                              role = EXCLUDED.role,
+                              city_id = CASE
+                                WHEN current_setting('app.current_city_id', true) = '*'
+                                THEN EXCLUDED.city_id
+                                ELSE users.city_id
+                              END
+                            RETURNING id
+                            """,
+                            (username, display_name or username, role, cid),
+                        )
+                    row = cur.fetchone()
+                self._commit(conn)
+            except UniqueViolation as exc:
+                raise UsernameConflict(username) from exc
+            except IntegrityError as exc:
+                if getattr(exc, "sqlstate", None) == "23505":
+                    raise UsernameConflict(username) from exc
+                raise
             return int(row["id"])
 
     def get_user(self, username: str) -> Optional[Dict[str, Any]]:
@@ -1447,7 +1614,8 @@ class Store:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, username, display_name, role, active, password_hash, created_at
+                    SELECT id, username, display_name, role, active, password_hash,
+                           city_id, created_at
                     FROM users WHERE username = %s
                     """,
                     (username,),
@@ -1462,30 +1630,44 @@ class Store:
         entity_type: str,
         entity_id: Optional[str] = None,
         detail: Optional[Dict[str, Any]] = None,
+        city_id: Optional[str] = None,
     ) -> int:
+        cid = city_id
+        if cid is None:
+            tenant = get_tenant_city()
+            if tenant and tenant != TENANT_ALL:
+                cid = tenant
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO audit_log (actor, action, entity_type, entity_id, detail)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO audit_log (actor, action, entity_type, entity_id, detail, city_id)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id
                     """,
-                    (actor, action, entity_type, entity_id, Jsonb(detail or {})),
+                    (actor, action, entity_type, entity_id, Jsonb(detail or {}), cid),
                 )
                 row = cur.fetchone()
             self._commit(conn)
             return int(row["id"])
 
-    def list_audit(self, limit: int = 100, entity_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_audit(
+        self,
+        limit: int = 100,
+        entity_type: Optional[str] = None,
+        city_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         clauses = ["1=1"]
         args: List[Any] = []
         if entity_type:
             clauses.append("entity_type = %s")
             args.append(entity_type)
+        if city_id:
+            clauses.append("city_id = %s")
+            args.append(city_id)
         args.append(limit)
         sql = f"""
-            SELECT id, actor, action, entity_type, entity_id, detail, created_at
+            SELECT id, actor, action, entity_type, entity_id, detail, city_id, created_at
             FROM audit_log
             WHERE {' AND '.join(clauses)}
             ORDER BY id DESC
@@ -1496,12 +1678,21 @@ class Store:
                 cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
 
-    def list_users(self) -> List[Dict[str, Any]]:
+    def list_users(self, city_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        clauses = ["1=1"]
+        args: List[Any] = []
+        if city_id:
+            clauses.append("city_id = %s")
+            args.append(city_id)
+        sql = f"""
+            SELECT id, username, display_name, role, active, city_id, created_at
+            FROM users
+            WHERE {' AND '.join(clauses)}
+            ORDER BY id
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT id, username, display_name, role, active, created_at FROM users ORDER BY id"
-                )
+                cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
 
     def upsert_asset(
@@ -1540,24 +1731,26 @@ class Store:
             self._commit(conn)
             return str(row["id"])
 
-    def list_assets(self, asset_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_assets(
+        self, asset_type: Optional[str] = None, city_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        clauses = ["1=1"]
+        args: List[Any] = []
+        if asset_type:
+            clauses.append("asset_type = %s")
+            args.append(asset_type)
+        if city_id:
+            clauses.append("city_id = %s")
+            args.append(city_id)
+        sql = f"""
+            SELECT id, asset_type, name, lat, lon, zone_id, props, city_id, created_at
+            FROM assets
+            WHERE {' AND '.join(clauses)}
+            ORDER BY id
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
-                if asset_type:
-                    cur.execute(
-                        """
-                        SELECT id, asset_type, name, lat, lon, zone_id, props, created_at
-                        FROM assets WHERE asset_type = %s ORDER BY id
-                        """,
-                        (asset_type,),
-                    )
-                else:
-                    cur.execute(
-                        """
-                        SELECT id, asset_type, name, lat, lon, zone_id, props, created_at
-                        FROM assets ORDER BY id
-                        """
-                    )
+                cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
 
     def list_observations(self, event_id: str) -> List[Dict[str, Any]]:

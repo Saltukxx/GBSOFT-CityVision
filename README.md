@@ -100,6 +100,22 @@ python scripts/serve_api.py --port 8088
 - Zones: `python scripts/ingest_zones.py …` · Review DB: `cityvision review … --db`
 - `DATABASE_URL` → `.env` / `.env.example` (port **5435**)
 
+## DJI Dock (FlightHub 2)
+
+Dock tek bir buluta bağlanır, o yüzden uçuş operasyonu FlightHub 2'de kalır ve CityVision
+biten uçuşları OpenAPI ile çeker; tespit tamamen local. Donanım gelmeden mock ile
+çalıştırılabilir:
+
+```bash
+python scripts/flighthub_sync.py mock --video data/samples/smoke.mp4   # 1. terminal
+CITYVISION_FH2_BASE_URL=http://127.0.0.1:8099 \
+CITYVISION_FH2_USER_TOKEN=mock-organization-key \
+  python scripts/flighthub_sync.py pull                                # 2. terminal
+```
+
+Rehber: [`docs/flighthub-integration.md`](docs/flighthub-integration.md) — doğrulanmamış
+endpoint'ler ve ilk uçuş öncesi kontrol listesi orada.
+
 ## Offline event demo (YOLO gerekmez)
 
 Üç bakışın aynı çukuru görmesi senaryosu:

@@ -11,6 +11,10 @@ from cityvision.events.confidence import (
 from cityvision.geo.gps import haversine_m
 from cityvision.pipeline.types import Detection, MunicipalEvent
 
+# Model B has no track_id; without a spatial cell the key collapses to class:frame
+# and a 4K corridor keeps only the highest-confidence box of that class.
+_COLLAPSE_GRID = 32
+
 
 @dataclass
 class _Cluster:
@@ -49,12 +53,14 @@ def fuse_detections(
     allowed = set(event_classes)
     clusters: List[_Cluster] = []
 
-    # Prefer peak-confidence observation per track+class to reduce spam
+    # Prefer peak-confidence observation per track+class to reduce spam.
+    # Untracked boxes (Model B) key on a 32x32 cell of the box centre so two
+    # potholes in one aerial frame stay distinct.
     best: Dict[str, Detection] = {}
     for det in detections:
         if det.class_name not in allowed:
             continue
-        key = f"{det.class_name}:{det.track_id if det.track_id is not None else det.frame}"
+        key = _collapse_key(det, width, height)
         prev = best.get(key)
         if prev is None or det.confidence > prev.confidence:
             best[key] = det
@@ -179,6 +185,20 @@ def fuse_detections(
             )
         )
     return events
+
+
+def _collapse_key(
+    det: Detection,
+    width: int,
+    height: int,
+    grid: int = _COLLAPSE_GRID,
+) -> str:
+    if det.track_id is not None:
+        return f"{det.class_name}:t{det.track_id}"
+    cx, cy = det.center
+    gx = min(grid - 1, max(0, int(cx / max(width, 1) * grid)))
+    gy = min(grid - 1, max(0, int(cy / max(height, 1) * grid)))
+    return f"{det.class_name}:f{det.frame}:g{gx}:{gy}"
 
 
 def _cluster_to_detection(cluster: _Cluster) -> Optional[Detection]:

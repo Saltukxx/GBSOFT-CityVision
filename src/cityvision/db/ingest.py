@@ -18,7 +18,9 @@ _MEDIA_MAP = {
 }
 
 
-def ingest_run_dir(run_dir: str | Path, store: Store | None = None) -> Dict[str, Any]:
+def ingest_run_dir(
+    run_dir: str | Path, store: Store | None = None, city_id: str | None = None
+) -> Dict[str, Any]:
     """Ingest pipeline output into PostgreSQL (events, fleet, media, stats)."""
     run_dir = Path(run_dir).resolve()
     store = store or Store()
@@ -44,7 +46,7 @@ def ingest_run_dir(run_dir: str | Path, store: Store | None = None) -> Dict[str,
         "model_a": summary.get("model_a"),
         "model_b": summary.get("model_b"),
         "route_id": summary.get("route_id"),
-        "city_id": summary.get("city_id") or settings.default_city,
+        "city_id": city_id or summary.get("city_id") or settings.default_city,
     }
 
     det_path = run_dir / "detections.jsonl"

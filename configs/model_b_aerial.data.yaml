@@ -1,6 +1,8 @@
 path: data/datasets/model_b_aerial
 train: images/train
 val: images/val
+# hold-out (scripts/eval_aerial.py): clip3 → images/test
+test: images/test
 
 names:
   0: pothole

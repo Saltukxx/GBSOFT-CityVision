@@ -50,6 +50,8 @@ def test_pipeline_drone_defaults():
     assert cfg["geofence"]["enabled"] is False
     assert cfg["events"]["road_roi"]["enabled"] is False
     assert "manhole" not in cfg["events"]["event_classes"]
+    assert cfg["detection"]["manhole_over_pothole_iou"] == 0.15
+    assert "road_damage" in cfg["detection"]["manhole_over_distress_classes"]
 
 
 def test_pipeline_profile_overlays():

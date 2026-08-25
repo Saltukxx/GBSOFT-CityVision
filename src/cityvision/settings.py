@@ -24,6 +24,11 @@ def _env(key: str, default: Optional[str] = None) -> Optional[str]:
     return os.environ.get(key) or _read_env_file_value(key) or default
 
 
+def read_env(key: str, default: Optional[str] = None) -> Optional[str]:
+    """Env lookup with `.env` fallback, for optional subsystems that keep their own config."""
+    return _env(key, default)
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> "Settings":
     return Settings()
@@ -74,6 +79,18 @@ class Settings:
             "off",
         }
         self.default_city: str = (_env("CITYVISION_DEFAULT_CITY", "erzurum") or "erzurum").strip()
+        # When on, the server derives city from the principal (never from a
+        # client-supplied city_id except as a same-city convenience / superadmin
+        # filter) and anonymous dashboard reads are closed. Default off so
+        # existing single-city pilots keep working until staging is flipped.
+        self.strict_tenancy: bool = (
+            _env("CITYVISION_STRICT_TENANCY", "0") or "0"
+        ).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         rbac_raw = (_env("CITYVISION_RBAC", "auto") or "auto").strip().lower()
         if rbac_raw == "auto":
             # Enforce roles when JWT or API key is configured

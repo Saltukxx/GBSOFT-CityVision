@@ -1,0 +1,8 @@
+path: /Users/saltuk/Desktop/GBSOFT-CITYVISION/data/datasets/own_footage_new
+train: images/train
+val: images/val
+names:
+  0: pothole
+  1: road_crack
+  2: manhole
+  3: road_damage

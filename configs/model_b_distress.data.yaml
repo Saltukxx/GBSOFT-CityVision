@@ -1,0 +1,14 @@
+# Experiment only: road_crack + road_damage merged to road_distress.
+# Built from the aerial export copy; labels_hand is unchanged.
+path: data/datasets/model_b_distress
+train: images/train
+val: images/val
+test: images/test
+# split_manifest train=92b9f5ab212771990a26c3d53d1ece70d2a06087cd0f6da46ad92bb9a7073d7b
+# split_manifest val=4c6485d103032b45165a7b524c80de7ddeaecfe9667a09d07fd4aba25c9cce34
+# split_manifest test=261472f9c149a78c9a648f25041b0150fb53862da1ddb3c269761dfc7904f2fc
+
+names:
+  0: pothole
+  1: road_distress
+  2: manhole

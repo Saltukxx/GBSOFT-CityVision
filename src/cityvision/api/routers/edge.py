@@ -10,7 +10,13 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
-from cityvision.api.deps import Principal, get_store, require_admin
+from cityvision.api.deps import (
+    Principal,
+    get_store,
+    optional_city_id,
+    require_admin,
+    resolve_city_id,
+)
 from cityvision.edge.package import (
     ensure_run_summary,
     generate_edge_token,
@@ -20,9 +26,19 @@ from cityvision.edge.package import (
     verify_edge_token,
 )
 from cityvision.settings import get_settings
+from cityvision.tenant import reset_tenant_city, set_tenant_city
 from cityvision.workers.jobs import enqueue_job
 
 router = APIRouter(prefix="/api/edge", tags=["edge"])
+
+
+def _bound_device_city(device: dict[str, Any], requested: Optional[str]) -> str:
+    """Uploads inherit the device's city; a client cannot retarget another city."""
+    settings = get_settings()
+    bound = device.get("city_id") or settings.default_city
+    if requested and bound and requested != bound:
+        raise HTTPException(status_code=403, detail="cannot upload to another city's data")
+    return str(bound)
 
 
 class EdgeDeviceCreate(BaseModel):
@@ -48,7 +64,7 @@ def _edge_token_from_headers(
 def require_edge_device(
     x_edge_token: Optional[str] = Header(None, alias="X-Edge-Token"),
     authorization: Optional[str] = Header(None),
-) -> dict[str, Any]:
+):
     token = _edge_token_from_headers(x_edge_token, authorization)
     if not token:
         raise HTTPException(status_code=401, detail="missing edge token")
@@ -60,7 +76,14 @@ def require_edge_device(
     if not device.get("active", True):
         raise HTTPException(status_code=403, detail="device inactive")
     store.touch_edge_device(str(device["id"]))
-    return device
+    tenant_token = None
+    if device.get("city_id"):
+        tenant_token = set_tenant_city(str(device["city_id"]))
+    try:
+        yield device
+    finally:
+        if tenant_token is not None:
+            reset_tenant_city(tenant_token)
 
 
 @router.post("/devices")
@@ -73,7 +96,7 @@ def register_device(
     settings = get_settings()
     token = generate_edge_token()
     token_hash = hash_edge_token(token)
-    city_id = body.city_id or settings.default_city
+    city_id = resolve_city_id(principal, body.city_id) or settings.default_city
     try:
         store.upsert_city(city_id, city_id.title())
     except Exception:
@@ -105,9 +128,9 @@ def register_device(
 @router.get("/devices")
 def list_devices(
     city_id: Optional[str] = None,
-    _principal: Principal = Depends(require_admin),
+    principal: Principal = Depends(require_admin),
 ) -> list[dict[str, Any]]:
-    return get_store().list_edge_devices(city_id=city_id)
+    return get_store().list_edge_devices(city_id=optional_city_id(principal, city_id))
 
 
 @router.post("/upload")
@@ -134,7 +157,7 @@ async def upload_run_package(
 
     upload_id = uuid.uuid4().hex
     device_id = str(device["id"])
-    cid = city_id or device.get("city_id") or settings.default_city
+    cid = _bound_device_city(device, city_id)
     vid = vehicle_id or device.get("vehicle_id")
     name = run_name or f"{device_id}-{upload_id[:8]}"
     safe_name = "".join(c if c.isalnum() or c in "-_" else "-" for c in name)[:80]
@@ -220,7 +243,7 @@ def get_upload(
     if not row:
         raise HTTPException(status_code=404, detail="upload not found")
     if row.get("device_id") != device.get("id"):
-        raise HTTPException(status_code=403, detail="upload belongs to another device")
+        raise HTTPException(status_code=404, detail="upload not found")
     if row.get("job_id"):
         job = get_store().get_job(int(row["job_id"]))
         row = {**row, "job": job}
@@ -303,7 +326,7 @@ async def upload_video(
         }
 
     upload_id = uuid.uuid4().hex
-    cid = city_id or device.get("city_id") or settings.default_city
+    cid = _bound_device_city(device, city_id)
     vid = vehicle_id or device.get("vehicle_id")
     cam = camera_id or "FRONT"
     name = run_name or f"{device_id}-{upload_id[:8]}"
@@ -389,7 +412,7 @@ def get_video_upload(
     if not row:
         raise HTTPException(status_code=404, detail="video upload not found")
     if row.get("device_id") != device.get("id"):
-        raise HTTPException(status_code=403, detail="upload belongs to another device")
+        raise HTTPException(status_code=404, detail="video upload not found")
     if row.get("job_id"):
         job = get_store().get_job(int(row["job_id"]))
         row = {**row, "job": job}

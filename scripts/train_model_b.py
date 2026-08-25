@@ -4,6 +4,10 @@
 Examples:
   python scripts/train_model_b.py --data configs/model_b_road.data.yaml --epochs 40 --name train_road_rdd
   python scripts/train_model_b.py --epochs 80 --model yolov8n.pt
+
+Aerial (drone) runs want rotation and vertical flip, which are off by default:
+  python scripts/train_model_b.py --data configs/model_b_aerial.data.yaml \
+      --model yolov8s.pt --imgsz 960 --degrees 180 --flipud 0.5
 """
 
 from __future__ import annotations
@@ -16,7 +20,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from cityvision.pipeline.train_utils import count_dataset_images, materialize_data_yaml
+from cityvision.pipeline.train_utils import (
+    count_dataset_images,
+    materialize_data_yaml,
+    patch_tal_for_mps,
+)
 
 DEFAULT_DATA = ROOT / "configs" / "model_b.data.yaml"
 DEFAULT_OUT = ROOT / "runs" / "model_b"
@@ -43,7 +51,29 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--no-val",
         action="store_true",
-        help="Skip per-epoch validation (MPS TAL/NMS crash workaround)",
+        help="Skip per-epoch validation. Escape hatch only — it also disables patience "
+        "and best.pt selection. MPS validation works as of ultralytics 8.4 / torch 2.8.",
+    )
+    p.add_argument(
+        "--val-device",
+        default=None,
+        help="Device for the final validation pass (e.g. cpu) when --device is unstable there",
+    )
+    # Aerial augmentation: a drone yaws, so every rotation and a vertical flip are valid views
+    p.add_argument("--degrees", type=float, default=None, help="Rotation augment, e.g. 180")
+    p.add_argument("--flipud", type=float, default=None, help="Vertical flip probability")
+    p.add_argument("--fliplr", type=float, default=None)
+    p.add_argument("--scale", type=float, default=None)
+    p.add_argument("--mosaic", type=float, default=None)
+    p.add_argument("--close-mosaic", type=int, default=None, help="Disable mosaic last N epochs")
+    p.add_argument("--seed", type=int, default=None, help="Ultralytics train seed")
+    p.add_argument(
+        "--lr0",
+        type=float,
+        default=None,
+        help="Initial LR override — lower this for small-increment fine-tuning on an "
+        "already-converged checkpoint, where the default 0.01 restart mostly disrupts "
+        "existing weights rather than learning much from a small new data slice.",
     )
     return p
 
@@ -57,26 +87,49 @@ def main(argv: list[str] | None = None) -> int:
     if not data_yaml.exists():
         raise SystemExit(f"Missing data yaml: {data_yaml}")
 
-    n_img, n_lbl, ds_root = count_dataset_images(data_yaml)
-    if n_img == 0 or n_lbl == 0:
-        raise SystemExit(
-            "Dataset boş.\n"
-            f"  root: {ds_root}\n"
-            f"  images/train: {n_img}\n"
-            f"  labels/train: {n_lbl}\n"
-            "Önce: python scripts/prepare_rdd2022.py --country Czech\n"
-            "veya CVAT export → data/datasets/model_b/"
-        )
-
-    train_yaml = materialize_data_yaml(data_yaml)
-    print(f"Dataset: {ds_root} (train images={n_img}, labels={n_lbl})")
+    # A resumed run takes its dataset from the checkpoint, so --data is only consulted
+    # for the closing validation pass; gating the resume on it would reject a healthy
+    # checkpoint just because --data still points at the default.
+    if args.resume:
+        train_yaml = materialize_data_yaml(data_yaml)
+        print(f"Resuming from {args.resume}")
+    else:
+        n_img, n_lbl, ds_root = count_dataset_images(data_yaml)
+        if n_img == 0 or n_lbl == 0:
+            raise SystemExit(
+                "Dataset boş.\n"
+                f"  root: {ds_root}\n"
+                f"  images/train: {n_img}\n"
+                f"  labels/train: {n_lbl}\n"
+                "Önce: python scripts/prepare_rdd2022.py --country Czech\n"
+                "veya CVAT export → data/datasets/model_b/"
+            )
+        train_yaml = materialize_data_yaml(data_yaml)
+        print(f"Dataset: {ds_root} (train images={n_img}, labels={n_lbl})")
 
     from ultralytics import YOLO
+
+    # Always safe to install: it only diverts when tensors are on MPS, and a resumed run
+    # restores its device from the checkpoint rather than from --device.
+    patch_tal_for_mps()
 
     if args.resume:
         model = YOLO(args.resume)
         results = model.train(resume=True)
     else:
+        overrides = {
+            "degrees": args.degrees,
+            "flipud": args.flipud,
+            "fliplr": args.fliplr,
+            "scale": args.scale,
+            "mosaic": args.mosaic,
+            "close_mosaic": args.close_mosaic,
+            "seed": args.seed,
+            "lr0": args.lr0,
+        }
+        overrides = {k: v for k, v in overrides.items() if v is not None}
+        if overrides:
+            print("Augment overrides: " + " ".join(f"{k}={v}" for k, v in overrides.items()))
         model = YOLO(args.model)
         results = model.train(
             data=str(train_yaml),
@@ -90,6 +143,7 @@ def main(argv: list[str] | None = None) -> int:
             patience=args.patience,
             exist_ok=True,
             val=not args.no_val,
+            **overrides,
         )
 
     run_dir = Path(args.project) / args.name
@@ -113,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Training finished. Check weights under {run_dir}")
 
     try:
-        val_device = "cpu" if args.no_val and args.device == "mps" else args.device
+        val_device = args.val_device or args.device
         metrics = model.val(data=str(train_yaml), device=val_device)
         maps = getattr(metrics, "box", None)
         if maps is not None:

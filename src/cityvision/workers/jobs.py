@@ -9,6 +9,7 @@ from cityvision.db.ingest import ingest_run_dir
 from cityvision.db.store import Store
 from cityvision.db.zones import ingest_zones_geojson
 from cityvision.settings import get_settings
+from cityvision.tenant import TENANT_ALL, reset_tenant_city, set_tenant_city
 
 log = logging.getLogger(__name__)
 
@@ -62,23 +63,32 @@ def run_job(job_id: int) -> None:
         return
     job_type = row["job_type"]
     payload = row.get("payload") or {}
+    job_city = row.get("city_id") or payload.get("city_id")
+    token = set_tenant_city(str(job_city) if job_city else TENANT_ALL)
     try:
-        if job_type == "ingest_run":
-            result = ingest_run_dir(payload["run_dir"], store=store)
-        elif job_type == "ingest_zones":
-            result = ingest_zones_geojson(payload["path"], store=store)
-        elif job_type == "analyze_video":
-            result = _run_analyze_video(store, payload)
-        else:
-            raise ValueError(f"unknown job_type: {job_type}")
-        store.mark_job_done(job_id, ok=True, result=result)
-        _sync_edge_upload(store, payload, status="succeeded", error=None)
-        _sync_edge_video_upload(store, payload, status="succeeded", error=None)
-    except Exception as exc:  # noqa: BLE001
-        log.exception("job %s failed", job_id)
-        store.mark_job_done(job_id, ok=False, error=str(exc))
-        _sync_edge_upload(store, payload, status="failed", error=str(exc))
-        _sync_edge_video_upload(store, payload, status="failed", error=str(exc))
+        try:
+            if job_type == "ingest_run":
+                result = ingest_run_dir(
+                    payload["run_dir"], store=store, city_id=job_city
+                )
+            elif job_type == "ingest_zones":
+                result = ingest_zones_geojson(
+                    payload["path"], store=store, city_id=job_city
+                )
+            elif job_type == "analyze_video":
+                result = _run_analyze_video(store, payload)
+            else:
+                raise ValueError(f"unknown job_type: {job_type}")
+            store.mark_job_done(job_id, ok=True, result=result)
+            _sync_edge_upload(store, payload, status="succeeded", error=None)
+            _sync_edge_video_upload(store, payload, status="succeeded", error=None)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("job %s failed", job_id)
+            store.mark_job_done(job_id, ok=False, error=str(exc))
+            _sync_edge_upload(store, payload, status="failed", error=str(exc))
+            _sync_edge_video_upload(store, payload, status="failed", error=str(exc))
+    finally:
+        reset_tenant_city(token)
 
 
 def _run_analyze_video(store: Store, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -135,7 +145,7 @@ def _run_analyze_video(store: Store, payload: Dict[str, Any]) -> Dict[str, Any]:
                     summary = {}
             except json.JSONDecodeError:
                 summary = {}
-        if city_id and not summary.get("city_id"):
+        if city_id:
             summary["city_id"] = city_id
         if vehicle_id and not summary.get("vehicle_id"):
             summary["vehicle_id"] = vehicle_id
@@ -148,7 +158,7 @@ def _run_analyze_video(store: Store, payload: Dict[str, Any]) -> Dict[str, Any]:
             encoding="utf-8",
         )
 
-    ingest_result = ingest_run_dir(out_dir, store=store)
+    ingest_result = ingest_run_dir(out_dir, store=store, city_id=city_id)
     store.update_edge_video_upload(
         upload_id, status="succeeded", run_dir=str(out_dir.resolve())
     )

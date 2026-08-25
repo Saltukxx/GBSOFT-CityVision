@@ -81,6 +81,99 @@ Alttaki Baidu street-view görüntüleri Baidu Maps ToS’a tabidir; ticari ağ�
 
 Sonra yerel / CVAT verisiyle fine-tune ederek Türkiye şartlarına uyarlarsın.
 
+## 0d) Aerial (DJI) — kendi el etiketlerimiz
+
+Veri toplama: `docs/aerial-data-collection.md`. Etiketleme kuralları: `docs/labeling-guide-aerial.md`.
+Ölçüm geçmişi: `docs/eval/README.md`.
+
+```bash
+# 1) Kareleri çıkar — kaynak 4K, ince çatlak için tam çözünürlük şart
+python scripts/label_aerial.py --extract data/samples/clip4_1400.mp4 --prefix clip4 \
+  --every-sec 1 --max-width 3840
+
+# 2) Hangi kare etiketlenmeye değer? (düşük güven / model çelişkisi / çatlak adayı)
+python scripts/queue_uncertain.py --device mps
+
+# 3) Tarayıcıda etiketle — "öncelik" filtresi kuyruğu kullanır, B = temiz kare
+python scripts/label_aerial.py
+# doğrudan bir klipte açmak için: http://127.0.0.1:8765/?clip=clip4&mode=todo
+
+# 4) YOLO train/val/test'e paketle (klip bazlı bölme)
+python scripts/label_aerial.py --export
+
+# 5) Eğit — drone yaw'ladığı için dönme ve dikey flip açık olmalı
+python scripts/train_model_b.py \
+  --data configs/model_b_aerial.data.yaml \
+  --model yolov8s.pt --imgsz 1280 --epochs 100 --batch 4 --device mps \
+  --degrees 180 --flipud 0.5 --close-mosaic 15 --patience 25 \
+  --name train_aerial_v3 --export-to models/infra-b-road-aerial-v3.pt
+
+# 6) Hold-out klipte ölç (eğitime hiç girmeyen clip3)
+python scripts/eval_aerial.py --split test --device mps --tag aerial-v3
+```
+
+**MPS tuzağı:** `--device mps` verdiğin halde Ultralytics başlıkta `CPU (arm)` yazıyorsa,
+komut kum havuzu (sandbox) içinde çalışıyor ve PyTorch GPU'yu görmüyor —
+`torch.backends.mps.is_available()` orada `False` döner. Eğitim durmaz, sadece 2 kat yavaşlar.
+Başlangıçta `MPS (Apple ...)` satırını ve ilk epoch'ta sıfırdan farklı bir `GPU_mem` değeri
+gördüğünü doğrula; `0G` görüyorsan koşu CPU'dadır.
+
+**MPS'in ikinci tuzağı — saatler sonra çöken eğitim:** PyTorch'un MPS arka ucu, `.expand()`
+ile genişletilmiş bitişik olmayan tensörlerde boolean maske indekslemeyi yanlış sayıyor.
+Ultralytics'in hedef atayıcısı (`TaskAlignedAssigner.get_box_metrics`) bunu kullandığı için
+eğitim ortasında düşüyor:
+
+```
+RuntimeError: shape mismatch: value tensor of shape [6772]
+cannot be broadcast to indexing result of shape [6480]
+```
+
+Hata belirsiz zamanlı — karedeki kutu sayısına bağlı, o yüzden v3 tam 25. epoch'ta düştü.
+Ultralytics 8.4 bu noktada CPU'ya düşüyor ama **yalnız bellek yetmezliğinde**, şekil
+uyuşmazlığında değil. `patch_tal_for_mps()` (`src/cityvision/pipeline/train_utils.py`)
+atayıcıyı MPS'te CPU'ya yönlendiriyor; `train_model_b.py` bunu her koşuda kuruyor, CPU ve
+CUDA'da etkisiz. Ölçtüğümüz kadarıyla yavaşlatmıyor (atama, adımın küçük bir parçası).
+
+Çöktüyse sıfırdan başlamaya gerek yok, `last.pt` duruyor:
+
+```bash
+python scripts/train_model_b.py --resume runs/model_b/train_aerial_v3/weights/last.pt \
+  --data configs/model_b_aerial.data.yaml \
+  --name train_aerial_v3 --export-to models/infra-b-road-aerial-v3.pt
+```
+
+`--name` ve `--export-to` tekrar verilmeli: `--resume` veri setini ve hiperparametreleri
+checkpoint'ten okur ama dışa aktarma hedefini okumaz.
+
+`--imgsz 1280` seçimi 4K karelerden geliyor: 960'a indirince 4K'daki 12 px'lik çatlak 3 px'e
+düşüyor. Bedeli hız — M5 Pro'da 847 görüntü için epoch ~4-5 dk (960'da ~1 dk).
+
+Bölme kuralı `src/cityvision/pipeline/dataset_split.py` içinde: `clip3` tamamı hold-out test,
+diğer her klip kendi zaman çizgisinde kesilir (son %20 val, kesim noktasındaki kare atılır).
+Video karelerini rastgele bölmek val skorunu gerçek dışı yükseltir, çünkü komşu saniyeler
+neredeyse aynı görüntüdür.
+
+`background.txt`'teki kareler boş etiketle dışa aktarılır (hard negative) ve yanlış alarmı
+düşürür. Bu liste `reviewed.txt`'ten ayrıdır: kutusuz gözden geçirilmiş bir kare "temiz" değil,
+sadece "atlanmış" olabilir.
+
+Temiz kareler eğitim bölmesinin en fazla %15'i olacak şekilde kırpılır (`BG_MAX_FRAC`) ve klipler
+arasında sırayla seçilir. Sınır olmadan oran %35'e çıkıyordu; bu kadar boş görüntü kaybı
+"hiçbir şey tahmin etme" yönüne kaydırıp nadir sınıflarda duyarlılığı düşürür. Kırpma yalnız
+eğitimde: val ve test her temiz kareyi tutar, yanlış alarm ölçümü dürüst kalsın diye.
+
+## 0e) Neden sokak seviyesi setlerle birleştirmiyoruz
+
+SVRDD ve RoadEye araç yüksekliğinden, öne bakan perspektifle çekilmiş. Bizim kareler 20-60 m
+irtifadan eğik bakış. Aynı nesne iki domainde farklı görünür: rögar kapağı sokak görüntüsünde
+perspektiften dolayı elips, kuşbakışında daire; çatlak sokak görüntüsünde ekranın altında kalın,
+havadan ince bir çizgi. Kutu sayısını büyütmek için bu setleri karıştırmak, modele yanlış şekil
+ve ölçek önyargısı öğretme riski taşıyor (negatif transfer).
+
+Karar: **aerial veri setini kendimiz büyütüyoruz.** Yeni drone çekimleri geldikçe kare ekliyoruz.
+Sokak seviyesi ağırlıklar (`infra-b-road-rdd.pt`, `infra-b-road-svrdd.pt`) şimdilik pipeline'da
+emniyet ağı olarak duruyor; kendi modelimiz sınıf başına yeterli kutuya ulaşınca çıkarılacak.
+
 ## 0b) Waste bootstrap — GarbageOverflow (Plan A)
 
 ```bash

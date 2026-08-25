@@ -1,0 +1,50 @@
+{
+  "weights": "/Users/saltuk/Desktop/GBSOFT-CITYVISION/models/infra-b-road-aerial.pt",
+  "split": "test",
+  "imgsz": 640,
+  "conf": 0.25,
+  "iou": 0.5,
+  "when": "2026-08-17T14:05:58+00:00",
+  "overall": {
+    "precision": 0.948,
+    "recall": 0.9592,
+    "map50": 0.9925,
+    "map50_95": 0.6326
+  },
+  "per_class": {
+    "manhole": {
+      "precision": 0.948,
+      "recall": 0.9592,
+      "map50": 0.9925,
+      "map50_95": 0.6326
+    }
+  },
+  "save_dir": "/Users/saltuk/Desktop/GBSOFT-CITYVISION/runs/detect/val-10",
+  "images": 12,
+  "support": {
+    "pothole": 0,
+    "road_crack": 0,
+    "manhole": 19,
+    "road_damage": 0
+  },
+  "gate": {
+    "manhole_recall": {
+      "value": 0.9592,
+      "threshold": 0.85,
+      "instances": 19,
+      "status": "pass"
+    },
+    "pothole_map50": {
+      "value": 0.0,
+      "threshold": 0.5,
+      "instances": 0,
+      "status": "n/a"
+    },
+    "road_crack_map50": {
+      "value": 0.0,
+      "threshold": 0.3,
+      "instances": 0,
+      "status": "n/a"
+    }
+  }
+}

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from cityvision.settings import get_settings
+from cityvision.tenant import reset_tenant_city, set_tenant_city
 
 # Read-only endpoints the operator dashboard polls without a credential.
 # Evidence media (/api/storage, /api/media) is deliberately *not* here — it is
@@ -32,6 +33,15 @@ ALWAYS_OPEN_PATHS: frozenset[str] = frozenset({"/api/kpis", "/health"})
 # granted by a signed URL query string instead. check_media_access() in the
 # route does the real enforcement — passing through here is not "open".
 MEDIA_PREFIXES: tuple[str, ...] = ("/api/storage", "/api/media")
+
+# Device-facing edge routes. /api/edge/devices is the human admin registry
+# and must go through normal JWT/API-key tenancy — not this bypass.
+_EDGE_DEVICE_PREFIXES: tuple[str, ...] = (
+    "/api/edge/upload",
+    "/api/edge/uploads",
+    "/api/edge/heartbeat",
+    "/api/edge/video",
+)
 
 
 def _matches(path: str, prefixes: Iterable[str]) -> bool:
@@ -68,13 +78,16 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Edge device tokens are verified by the edge router's dependency.
-        if path.startswith("/api/edge/") and (
-            request.headers.get("x-edge-token")
-            or (request.headers.get("authorization") or "").lower().startswith("bearer ")
-        ):
+        if _is_edge_device_request(request):
             return await call_next(request)
 
-        if request.method == "GET" and _matches(path, OPEN_READ_PREFIXES):
+        # Strict tenancy closes anonymous dashboard reads; TenantMiddleware
+        # then requires a principal so city scope can be derived from it.
+        if (
+            not settings.strict_tenancy
+            and request.method == "GET"
+            and _matches(path, OPEN_READ_PREFIXES)
+        ):
             return await call_next(request)
 
         if request.method == "GET" and _matches(path, MEDIA_PREFIXES):
@@ -91,6 +104,80 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
             if token and decode_access_token(token):
                 return await call_next(request)
         return JSONResponse({"detail": "unauthorized"}, status_code=401)
+
+
+class TenantMiddleware(BaseHTTPMiddleware):
+    """When strict tenancy is on, require a principal on /api/* and SET the city GUC.
+
+    Signed media URLs and edge-device tokens stay reachable without a JWT —
+    those routes enforce their own credentials.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        settings = get_settings()
+        if not settings.strict_tenancy:
+            return await call_next(request)
+
+        path = request.url.path
+        if _matches(path, settings.auth_exempt_prefixes):
+            return await call_next(request)
+        if path == "/health":
+            return await call_next(request)
+        if not path.startswith("/api/"):
+            return await call_next(request)
+        if request.method == "GET" and _matches(path, MEDIA_PREFIXES):
+            return await call_next(request)
+        if (
+            request.method == "GET"
+            and path.startswith("/api/runs/")
+            and path.endswith("/annotated")
+        ):
+            return await call_next(request)
+        if _is_edge_device_request(request):
+            return await call_next(request)
+
+        from fastapi import HTTPException as FastAPIHTTPException
+
+        from cityvision.api.deps import resolve_principal, tenant_guc_value
+
+        principal = resolve_principal(
+            request.headers.get("authorization"),
+            request.headers.get("x-api-key"),
+        )
+        if principal.role == "anonymous":
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        try:
+            guc = tenant_guc_value(principal, request.query_params.get("city_id"))
+        except FastAPIHTTPException as exc:
+            return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+        token = set_tenant_city(guc)
+        try:
+            return await call_next(request)
+        finally:
+            reset_tenant_city(token)
+
+
+def _is_edge_device_request(request: Request) -> bool:
+    """True when this looks like field hardware presenting an edge token.
+
+    A valid human JWT on these paths is *not* treated as a device credential —
+    those callers go through normal tenancy. Garbage Bearer values still reach
+    ``require_edge_device``, which 401s them.
+    """
+    path = request.url.path
+    if not _matches(path, _EDGE_DEVICE_PREFIXES):
+        return False
+    if request.headers.get("x-edge-token"):
+        return True
+    token = _bearer(request.headers.get("authorization"))
+    if not token:
+        return False
+    if get_settings().jwt_secret:
+        from cityvision.api.security import decode_access_token
+
+        if decode_access_token(token):
+            return False
+    return True
 
 
 def _bearer(header: Optional[str]) -> Optional[str]:

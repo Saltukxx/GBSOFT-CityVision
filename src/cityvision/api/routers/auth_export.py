@@ -6,17 +6,26 @@ import json
 import time
 from typing import Any, Iterator, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from cityvision.api.deps import get_store, require_admin
+from cityvision.api.deps import (
+    Principal,
+    get_principal,
+    get_store,
+    optional_city_id,
+    require_admin,
+    require_city_row,
+    resolve_city_id,
+)
 from cityvision.api.security import (
     create_access_token,
-    decode_access_token,
     hash_password,
     verify_password,
 )
+from cityvision.db.store import UsernameConflict
+from cityvision.domain.statuses import RESERVED_USERNAMES, USER_ROLES
 from cityvision.settings import get_settings
 
 router = APIRouter(prefix="/api", tags=["auth-export"])
@@ -32,6 +41,7 @@ class PasswordSetBody(BaseModel):
     password: str = Field(..., min_length=6)
     role: str = "operator"
     display_name: str = ""
+    city_id: Optional[str] = None
 
 
 @router.post("/auth/login")
@@ -48,6 +58,7 @@ def login(body: LoginBody) -> dict[str, Any]:
     token = create_access_token(
         user["username"],
         user.get("role") or "operator",
+        city_id=user.get("city_id"),
         expires_minutes=settings.jwt_expire_minutes,
     )
     get_store().add_audit(
@@ -55,6 +66,7 @@ def login(body: LoginBody) -> dict[str, Any]:
         action="login",
         entity_type="user",
         entity_id=str(user["id"]),
+        city_id=user.get("city_id"),
     )
     return {
         "access_token": token,
@@ -63,46 +75,65 @@ def login(body: LoginBody) -> dict[str, Any]:
             "username": user["username"],
             "display_name": user.get("display_name"),
             "role": user.get("role"),
+            "city_id": user.get("city_id"),
         },
     }
 
 
 @router.get("/auth/me")
-def me(authorization: Optional[str] = Header(None)) -> dict[str, Any]:
-    if not authorization or not authorization.lower().startswith("bearer "):
+def me(principal: Principal = Depends(get_principal)) -> dict[str, Any]:
+    if not principal.is_authenticated:
         raise HTTPException(status_code=401, detail="missing bearer token")
-    payload = decode_access_token(authorization.split(" ", 1)[1].strip())
-    if not payload:
-        raise HTTPException(status_code=401, detail="invalid token")
-    user = get_store().get_user(str(payload.get("sub")))
+    user = get_store().get_user(principal.username)
     if not user:
         raise HTTPException(status_code=401, detail="user not found")
     return {
         "username": user["username"],
         "display_name": user.get("display_name"),
         "role": user.get("role"),
+        "city_id": user.get("city_id"),
         "active": user.get("active"),
     }
 
 
 @router.post("/auth/users")
 def set_user_password(
-    body: PasswordSetBody, _principal=Depends(require_admin)
+    body: PasswordSetBody, principal: Principal = Depends(require_admin)
 ) -> dict[str, Any]:
     """Create/update operator with password (admin when RBAC on)."""
     settings = get_settings()
-    uid = get_store().upsert_user(
-        body.username,
-        display_name=body.display_name or body.username,
-        role=body.role,
-        password_hash=hash_password(body.password),
-    )
+    if body.role not in USER_ROLES:
+        raise HTTPException(status_code=422, detail=f"unsupported role: {body.role}")
+    if body.role == "superadmin" and principal.role != "superadmin":
+        raise HTTPException(status_code=403, detail="cannot create superadmin")
+    if body.username.strip().lower() in RESERVED_USERNAMES:
+        raise HTTPException(status_code=422, detail="username is reserved")
+    city_id = body.city_id
+    if not principal.is_cross_city:
+        city_id = principal.city_id
+    elif body.role == "superadmin":
+        city_id = None
+    else:
+        city_id = resolve_city_id(principal, city_id)
+    try:
+        uid = get_store().upsert_user(
+            body.username,
+            display_name=body.display_name or body.username,
+            role=body.role,
+            password_hash=hash_password(body.password),
+            city_id=city_id,
+        )
+    except UsernameConflict as exc:
+        raise HTTPException(status_code=409, detail="username already taken") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     get_store().add_audit(
-        actor="system",
+        actor=principal.username,
         action="user_upsert",
         entity_type="user",
         entity_id=str(uid),
         detail={"username": body.username, "role": body.role},
+        city_id=city_id,
     )
     return {"id": uid, "username": body.username, "jwt_configured": bool(settings.jwt_secret)}
 
@@ -111,9 +142,14 @@ def set_user_password(
 def list_audit(
     limit: int = Query(100, ge=1, le=1000),
     entity_type: Optional[str] = None,
-    _principal=Depends(require_admin),
+    city_id: Optional[str] = None,
+    principal: Principal = Depends(require_admin),
 ) -> list[dict[str, Any]]:
-    return get_store().list_audit(limit=limit, entity_type=entity_type)
+    return get_store().list_audit(
+        limit=limit,
+        entity_type=entity_type,
+        city_id=optional_city_id(principal, city_id),
+    )
 
 
 @router.get("/events/export.csv")
@@ -122,14 +158,13 @@ def export_events_csv(
     type: Optional[str] = Query(None, alias="type"),
     city_id: Optional[str] = None,
     limit: int = Query(2000, ge=1, le=10000),
+    principal: Principal = Depends(get_principal),
 ) -> StreamingResponse:
-    from cityvision.api.deps import resolve_city_id
-
     rows = get_store().list_events(
         status=status,
         event_type=type,
         limit=limit,
-        city_id=resolve_city_id(city_id),
+        city_id=resolve_city_id(principal, city_id),
     )
     buf = io.StringIO()
     writer = csv.DictWriter(
@@ -161,11 +196,19 @@ def export_events_csv(
 
 
 @router.get("/jobs/{job_id}/stream")
-def stream_job(job_id: int) -> StreamingResponse:
+def stream_job(
+    job_id: int, principal: Principal = Depends(get_principal)
+) -> StreamingResponse:
     """Server-Sent Events for job status until terminal state."""
 
     def gen() -> Iterator[str]:
         store = get_store()
+        first = store.get_job(job_id)
+        try:
+            require_city_row(first, principal, detail="not found")
+        except HTTPException as exc:
+            yield f"event: error\ndata: {json.dumps({'detail': exc.detail})}\n\n"
+            return
         for _ in range(120):
             row = store.get_job(job_id)
             if not row:

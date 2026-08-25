@@ -33,10 +33,14 @@ data/samples/**
 outputs/**
 !outputs/.gitkeep
 *.pt
+*.pth
 *.onnx
 *.engine
 !models/.gitkeep
+models/rfdetr/
 runs/
+output/
+.venv-rfdetr/
 data/datasets/model_b/images/**/*
 data/datasets/model_b/labels/**/*
 !data/datasets/model_b/**/.gitkeep
@@ -47,6 +51,10 @@ data/datasets/model_b_svrdd/**
 !data/datasets/model_b_svrdd/README.md
 data/datasets/model_b_aerial/**
 !data/datasets/model_b_aerial/README.md
+!data/datasets/model_b_aerial/labels_hand/
+!data/datasets/model_b_aerial/labels_hand/**
+!data/datasets/model_b_aerial/*.txt
+data/datasets/model_b_distress/**
 data/raw/rdd2022/
 data/raw/roadeye_hf/
 *.mp4

@@ -53,6 +53,9 @@ WORK_ORDER_STATUSES: FrozenSet[str] = frozenset(
     }
 )
 
-OPERATOR_ROLES: FrozenSet[str] = frozenset({"operator", "admin"})
-ADMIN_ROLES: FrozenSet[str] = frozenset({"admin"})
-VIEWER_ROLES: FrozenSet[str] = frozenset({"viewer", "operator", "admin"})
+USER_ROLES: FrozenSet[str] = frozenset({"viewer", "operator", "admin", "superadmin"})
+OPERATOR_ROLES: FrozenSet[str] = frozenset({"operator", "admin", "superadmin"})
+ADMIN_ROLES: FrozenSet[str] = frozenset({"admin", "superadmin"})
+VIEWER_ROLES: FrozenSet[str] = frozenset({"viewer", "operator", "admin", "superadmin"})
+SUPERADMIN_ROLES: FrozenSet[str] = frozenset({"superadmin"})
+RESERVED_USERNAMES: FrozenSet[str] = frozenset({"api_key", "anonymous", "system"})

@@ -17,7 +17,10 @@ from cityvision.geo.gps import attach_gps_to_detections, discover_gps_sidecar, l
 from cityvision.pipeline.annotate import draw_detections
 from cityvision.pipeline.detector import DualModelDetector
 from cityvision.pipeline.export_json import JsonlWriter
-from cityvision.pipeline.manhole import suppress_potholes_under_manholes
+from cityvision.pipeline.manhole import (
+    suppress_overlapping_distress,
+    suppress_potholes_under_manholes,
+)
 from cityvision.pipeline.model_resolve import describe_models, resolve_model_b_paths
 from cityvision.pipeline.traffic import TrafficCounter
 from cityvision.pipeline.types import Detection, RunMeta
@@ -181,7 +184,15 @@ def run_pipeline(
             )
             dets = suppress_potholes_under_manholes(
                 dets,
-                iou_threshold=float(det_cfg.get("manhole_over_pothole_iou", 0.3)),
+                iou_threshold=float(det_cfg.get("manhole_over_pothole_iou", 0.15)),
+                pothole_classes=det_cfg.get(
+                    "manhole_over_distress_classes",
+                    ("pothole", "road_damage"),
+                ),
+            )
+            dets = suppress_overlapping_distress(
+                dets,
+                iou_threshold=float(det_cfg.get("distress_nms_iou", 0.3)),
             )
             for det in dets:
                 det.vehicle_id = vid

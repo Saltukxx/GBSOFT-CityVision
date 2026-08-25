@@ -1,0 +1,68 @@
+{
+  "weights": "models/infra-b-road-aerial-v3.pt",
+  "split": "val",
+  "imgsz": 1280,
+  "conf": 0.05,
+  "iou": 0.5,
+  "when": "2026-08-17T20:43:56+00:00",
+  "overall": {
+    "precision": 0.3288,
+    "recall": 0.2758,
+    "map50": 0.2204,
+    "map50_95": 0.0897
+  },
+  "per_class": {
+    "pothole": {
+      "precision": 0.3145,
+      "recall": 0.3333,
+      "map50": 0.2783,
+      "map50_95": 0.1382
+    },
+    "road_crack": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    "manhole": {
+      "precision": 0.6064,
+      "recall": 0.5658,
+      "map50": 0.419,
+      "map50_95": 0.1384
+    },
+    "road_damage": {
+      "precision": 0.3944,
+      "recall": 0.204,
+      "map50": 0.1841,
+      "map50_95": 0.0824
+    }
+  },
+  "save_dir": "/Users/saltuk/Desktop/GBSOFT-CITYVISION/runs/detect/val-20",
+  "images": 133,
+  "support": {
+    "pothole": 6,
+    "road_crack": 17,
+    "manhole": 76,
+    "road_damage": 83
+  },
+  "gate": {
+    "manhole_recall": {
+      "value": 0.5658,
+      "threshold": 0.85,
+      "instances": 76,
+      "status": "fail"
+    },
+    "pothole_map50": {
+      "value": 0.2783,
+      "threshold": 0.5,
+      "instances": 6,
+      "status": "fail"
+    },
+    "road_crack_map50": {
+      "value": 0.0,
+      "threshold": 0.3,
+      "instances": 17,
+      "status": "fail"
+    }
+  }
+}

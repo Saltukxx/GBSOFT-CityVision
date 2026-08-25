@@ -64,3 +64,14 @@ def test_default_svrdd_is_manhole_only():
     if not svrdd:
         return
     assert svrdd[0].allowed_classes == ("manhole",)
+
+
+def test_default_rdd_skips_pothole_on_drone():
+    cfg = load_pipeline_config()
+    specs = resolve_model_b_paths(cfg["detection"])
+    rdd = [s for s in specs if "rdd" in s.name.lower()]
+    if not rdd:
+        return
+    assert rdd[0].allowed_classes is not None
+    assert "pothole" not in rdd[0].allowed_classes
+    assert "road_damage" in rdd[0].allowed_classes

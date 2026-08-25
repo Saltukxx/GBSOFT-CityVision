@@ -1,0 +1,11 @@
+clip5 / clip6 pothole feasibility (no labels written)
+
+Question: can these unlabeled clips supply a class-stratified hold-out with >=50 pothole boxes?
+
+clip5: 231 frames. Asphalt corridor with manholes, longitudinal seams/cracks, repair patches, and many small dark spots. One stretch is gravel, not asphalt. Dark spots are mostly stain/debris/tiny pits — not 50 unambiguous bowls.
+
+clip6: 87 frames. Crosswalk + large rectangular patches, manholes, faint cracks, one possible circular depression near a cover. Same pattern: distress and covers are common; classic potholes are rare.
+
+Verdict: do NOT spend a labeling week hoping clip5/clip6 yield a pothole gate. They can hold out manhole + road_damage/crack. The ~50-box pothole hold-out needs a targeted flight over a pothole-heavy route.
+
+No labels_hand files were added for these clips.

@@ -129,6 +129,45 @@ def test_media_token_ttl_is_honoured(monkeypatch):
         assert not verify_media_token("storage:b", params["exp"], params["sig"])
 
 
+def test_signed_url_is_bound_to_city(monkeypatch):
+    with _client(monkeypatch, CITYVISION_JWT_SECRET="jwt-secret"):
+        from cityvision.api.media_tokens import (
+            storage_resource,
+            storage_url,
+            verify_media_token,
+        )
+
+        url = storage_url("evidence/a.jpg", city_id="erzurum")
+        assert "cid=erzurum" in url
+        params = dict(p.split("=", 1) for p in url.split("?", 1)[1].split("&"))
+        assert verify_media_token(
+            storage_resource("evidence/a.jpg"),
+            params["exp"],
+            params["sig"],
+            city_id="erzurum",
+        )
+        assert not verify_media_token(
+            storage_resource("evidence/a.jpg"),
+            params["exp"],
+            params["sig"],
+            city_id="ankara",
+        )
+
+
+def test_strict_tenancy_rejects_garbage_bearer_on_edge_admin(monkeypatch):
+    """A junk Authorization header must not skip tenancy on /api/edge/devices."""
+    with _client(
+        monkeypatch,
+        CITYVISION_STRICT_TENANCY="1",
+        CITYVISION_JWT_SECRET="mt-secret-key-32-bytes-minimum!!",
+        CITYVISION_API_KEY="",
+        CITYVISION_RBAC="1",
+    ) as client:
+        hdr = {"Authorization": "Bearer not-a-jwt"}
+        assert client.get("/api/edge/devices", headers=hdr).status_code == 401
+        assert client.get("/api/events", headers=hdr).status_code == 401
+
+
 @pytest.mark.parametrize("path", ["/api/events", "/api/kpis"])
 def test_dashboard_reads_stay_open(monkeypatch, path):
     """These are the reads the operator UI polls; they intentionally stay open.

@@ -1,0 +1,3 @@
+detection:
+  model_b_list: []
+  auto_discover_model_b: false

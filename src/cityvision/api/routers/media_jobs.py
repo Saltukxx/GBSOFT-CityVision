@@ -11,8 +11,11 @@ from cityvision.api.deps import (
     check_media_access,
     get_principal,
     get_store,
+    optional_city_id,
     require_admin,
+    require_city_row,
     require_operator,
+    resolve_city_id,
 )
 from cityvision.api.media_tokens import (
     media_resource,
@@ -22,6 +25,7 @@ from cityvision.api.media_tokens import (
 )
 from cityvision.api.schemas import IngestBody, WorkOrderUpdate, ZonesIngestBody
 from cityvision.config import ROOT
+from cityvision.settings import get_settings
 from cityvision.storage import get_object_store
 from cityvision.storage.local import LocalObjectStore
 from cityvision.workers.jobs import enqueue_job
@@ -29,21 +33,37 @@ from cityvision.workers.jobs import enqueue_job
 router = APIRouter(prefix="/api", tags=["media-jobs"])
 
 
+def _payload_with_city(
+    principal: Principal, extra: dict[str, Any], city_id: Optional[str] = None
+) -> dict[str, Any]:
+    payload = dict(extra)
+    if get_settings().strict_tenancy:
+        cid = resolve_city_id(principal, city_id)
+        payload["city_id"] = cid or get_settings().default_city
+    elif city_id:
+        payload["city_id"] = city_id
+    return payload
+
+
 @router.get("/events/{event_id}/media")
-def event_media_list(event_id: str) -> list[dict[str, Any]]:
+def event_media_list(
+    event_id: str, principal: Principal = Depends(get_principal)
+) -> list[dict[str, Any]]:
     store = get_store()
-    if not store.get_event(event_id):
-        raise HTTPException(status_code=404, detail="event not found")
-    return attach_media_urls(store.list_event_media(event_id))
+    event = require_city_row(store.get_event(event_id), principal, detail="event not found")
+    return attach_media_urls(store.list_event_media(event_id), city_id=event.get("city_id"))
 
 
-def attach_media_urls(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def attach_media_urls(
+    rows: list[dict[str, Any]], city_id: Optional[str] = None
+) -> list[dict[str, Any]]:
     """Add a (signed, when auth is on) playable URL to each media row."""
     for r in rows:
+        cid = r.get("city_id") or city_id
         if r.get("object_key"):
-            r["url"] = storage_url(str(r["object_key"]))
+            r["url"] = storage_url(str(r["object_key"]), city_id=cid)
         elif r.get("id"):
-            r["url"] = media_url(int(r["id"]))
+            r["url"] = media_url(int(r["id"]), city_id=cid)
     return rows
 
 
@@ -77,13 +97,21 @@ def serve_media(
     principal: Principal = Depends(get_principal),
     exp: Optional[str] = Query(None),
     sig: Optional[str] = Query(None),
+    cid: Optional[str] = Query(None),
 ):
     check_media_access(
-        media_resource(media_id), principal=principal, exp=exp, sig=sig
+        media_resource(media_id),
+        principal=principal,
+        exp=exp,
+        sig=sig,
+        city_id=cid,
     )
-    row = get_store().get_event_media(media_id)
-    if not row:
-        raise HTTPException(status_code=404, detail="media not found")
+    row = require_city_row(
+        get_store().get_event_media(media_id),
+        principal,
+        detail="media not found",
+        signed_city_id=cid,
+    )
     if row.get("object_key"):
         try:
             return _stream_object(row["object_key"], row.get("content_type"))
@@ -101,10 +129,22 @@ def serve_storage(
     principal: Principal = Depends(get_principal),
     exp: Optional[str] = Query(None),
     sig: Optional[str] = Query(None),
+    cid: Optional[str] = Query(None),
 ):
     check_media_access(
-        storage_resource(key), principal=principal, exp=exp, sig=sig
+        storage_resource(key),
+        principal=principal,
+        exp=exp,
+        sig=sig,
+        city_id=cid,
     )
+    if get_settings().strict_tenancy and not principal.is_cross_city:
+        require_city_row(
+            get_store().lookup_storage_key(key),
+            principal,
+            detail="object not found",
+            signed_city_id=cid,
+        )
     obj = get_object_store()
     if isinstance(obj, LocalObjectStore):
         try:
@@ -118,39 +158,65 @@ def serve_storage(
 
 
 @router.post("/jobs/ingest")
-def job_ingest(body: IngestBody, _principal=Depends(require_admin)) -> dict[str, Any]:
+def job_ingest(
+    body: IngestBody,
+    principal: Principal = Depends(require_admin),
+    city_id: Optional[str] = None,
+) -> dict[str, Any]:
     path = Path(body.run_dir)
     if not path.is_absolute():
         path = (ROOT / path).resolve()
     if not (path / "events.json").exists():
         raise HTTPException(status_code=404, detail=f"missing events.json under {path}")
-    job_id, deduped = enqueue_job(get_store(), "ingest_run", {"run_dir": str(path)})
+    try:
+        job_id, deduped = enqueue_job(
+            get_store(),
+            "ingest_run",
+            _payload_with_city(principal, {"run_dir": str(path)}, city_id),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"job_id": job_id, "status": "queued", "deduped": deduped}
 
 
 @router.post("/jobs/ingest-zones")
 def job_ingest_zones(
-    body: ZonesIngestBody, _principal=Depends(require_admin)
+    body: ZonesIngestBody,
+    principal: Principal = Depends(require_admin),
+    city_id: Optional[str] = None,
 ) -> dict[str, Any]:
     path = Path(body.path)
     if not path.is_absolute():
         path = (ROOT / path).resolve()
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"missing {path}")
-    job_id, deduped = enqueue_job(get_store(), "ingest_zones", {"path": str(path)})
+    try:
+        job_id, deduped = enqueue_job(
+            get_store(),
+            "ingest_zones",
+            _payload_with_city(principal, {"path": str(path)}, city_id),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"job_id": job_id, "status": "queued", "deduped": deduped}
 
 
 @router.get("/jobs")
-def list_jobs(limit: int = Query(50, ge=1, le=200)) -> list[dict[str, Any]]:
-    return get_store().list_jobs(limit=limit)
+def list_jobs(
+    limit: int = Query(50, ge=1, le=200),
+    city_id: Optional[str] = None,
+    principal: Principal = Depends(get_principal),
+) -> list[dict[str, Any]]:
+    return get_store().list_jobs(
+        limit=limit, city_id=optional_city_id(principal, city_id)
+    )
 
 
 @router.get("/jobs/{job_id}")
-def get_job(job_id: int) -> dict[str, Any]:
-    row = get_store().get_job(job_id)
-    if not row:
-        raise HTTPException(status_code=404, detail="job not found")
+def get_job(
+    job_id: int, principal: Principal = Depends(get_principal)
+) -> dict[str, Any]:
+    row = require_city_row(get_store().get_job(job_id), principal, detail="job not found")
     return row
 
 
@@ -158,8 +224,13 @@ def get_job(job_id: int) -> dict[str, Any]:
 def patch_work_order(
     work_order_id: int,
     body: WorkOrderUpdate,
-    _principal=Depends(require_operator),
+    principal: Principal = Depends(require_operator),
 ) -> dict[str, Any]:
+    require_city_row(
+        get_store().get_work_order(work_order_id),
+        principal,
+        detail="work order not found",
+    )
     try:
         row = get_store().update_work_order(
             work_order_id,

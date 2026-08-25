@@ -77,6 +77,27 @@ def test_fusion_merges_nearby_potholes():
     assert events[0].confidence > 0.9
 
 
+def test_fusion_keeps_two_untracked_potholes_in_same_frame():
+    """Aerial Model B has no track_id; far-apart boxes in one frame must both survive."""
+    dets = [
+        Detection(7, 1000, "pothole", 0.91, (20, 20, 60, 60)),
+        Detection(7, 1000, "pothole", 0.88, (580, 420, 620, 460)),
+    ]
+    events = fuse_detections(
+        detections=dets,
+        event_classes=["pothole"],
+        fusion_radius_m=15,
+        fusion_radius_norm=0.05,
+        fusion_window_ms=72 * 3600 * 1000,
+        model_version="test",
+        conf_bands={"discard": 0.7, "review": 0.85, "probable": 0.95},
+        conf_bonuses={"repeat_bonus": 0.1, "multi_vehicle_bonus": 0.1, "gps_bonus": 0.05},
+        width=640,
+        height=480,
+    )
+    assert len(events) == 2
+
+
 def test_confidence_bands():
     assert confidence_band(0.5, {"discard": 0.7, "review": 0.85, "probable": 0.95}) == "discard"
     assert confidence_band(0.8, {"discard": 0.7, "review": 0.85, "probable": 0.95}) == "manual_review"

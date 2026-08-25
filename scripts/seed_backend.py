@@ -76,9 +76,9 @@ def main() -> int:
     store.upsert_camera("FRONT", vehicle_id="BUS-17", label="Ön kamera", facing="front")
     store.upsert_camera("RIGHT", vehicle_id="BUS-17", label="Sağ kamera", facing="right")
 
-    store.upsert_user("operator", "Pilot Operatör", role="operator", password_hash=_pw("operator"))
-    store.upsert_user("admin", "Sistem Yöneticisi", role="admin", password_hash=_pw("admin123"))
-    store.upsert_user("viewer", "İzleyici", role="viewer", password_hash=_pw("viewer"))
+    store.upsert_user("operator", "Pilot Operatör", role="operator", password_hash=_pw("operator"), city_id=city_id)
+    store.upsert_user("admin", "Sistem Yöneticisi", role="admin", password_hash=_pw("admin123"), city_id=city_id)
+    store.upsert_user("viewer", "İzleyici", role="viewer", password_hash=_pw("viewer"), city_id=city_id)
 
     store.upsert_asset(
         "STOP-187",

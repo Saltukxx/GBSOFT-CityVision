@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from cityvision.api.deps import (
     Principal,
+    get_principal,
     get_store,
+    optional_city_id,
+    require_city_row,
     require_operator,
     resolve_city_id,
 )
@@ -22,12 +25,13 @@ def list_events(
     type: Optional[str] = Query(None, alias="type"),
     city_id: Optional[str] = None,
     limit: int = Query(200, ge=1, le=2000),
+    principal: Principal = Depends(get_principal),
 ) -> list[dict[str, Any]]:
     return get_store().list_events(
         status=status,
         event_type=type,
         limit=limit,
-        city_id=resolve_city_id(city_id),
+        city_id=resolve_city_id(principal, city_id),
     )
 
 
@@ -37,19 +41,25 @@ def events_near(
     lon: float = Query(...),
     radius_m: float = Query(50.0, ge=1, le=5000),
     limit: int = Query(50, ge=1, le=500),
+    city_id: Optional[str] = None,
+    principal: Principal = Depends(get_principal),
 ) -> list[dict[str, Any]]:
-    return get_store().events_near(lat, lon, radius_m, limit)
+    return get_store().events_near(
+        lat, lon, radius_m, limit, city_id=optional_city_id(principal, city_id)
+    )
 
 
 @router.get("/events/{event_id}")
-def get_event(event_id: str) -> dict[str, Any]:
+def get_event(
+    event_id: str, principal: Principal = Depends(get_principal)
+) -> dict[str, Any]:
     store = get_store()
-    row = store.get_event(event_id)
-    if not row:
-        raise HTTPException(status_code=404, detail="event not found")
+    row = require_city_row(store.get_event(event_id), principal, detail="event not found")
     from cityvision.api.routers.media_jobs import attach_media_urls
 
-    row["media"] = attach_media_urls(store.list_event_media(event_id))
+    row["media"] = attach_media_urls(
+        store.list_event_media(event_id), city_id=row.get("city_id")
+    )
     row["observations"] = store.list_observations(event_id)
     row["reviews"] = store.list_reviews(event_id=event_id, limit=50)
     return row
@@ -64,6 +74,7 @@ def patch_status(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
 ) -> dict[str, Any]:
     store = get_store()
+    require_city_row(store.get_event(event_id), principal, detail="event not found")
     actor = principal.username if principal.is_authenticated else actor_from_request_headers(
         authorization, x_api_key
     )
@@ -83,8 +94,7 @@ def create_work_order(
     principal: Principal = Depends(require_operator),
 ) -> dict[str, Any]:
     store = get_store()
-    if not store.get_event(event_id):
-        raise HTTPException(status_code=404, detail="event not found")
+    require_city_row(store.get_event(event_id), principal, detail="event not found")
     wid = store.create_work_order(
         event_id, body.unit, body.note, actor=principal.username
     )
@@ -97,6 +107,9 @@ def review_event(
     body: ReviewBody,
     principal: Principal = Depends(require_operator),
 ) -> dict[str, Any]:
+    require_city_row(
+        get_store().get_event(event_id), principal, detail="event not found"
+    )
     reviewer = (
         principal.username
         if principal.is_authenticated and principal.username != "anonymous"
@@ -120,14 +133,26 @@ def review_event(
 @router.get("/reviews")
 def list_reviews(
     event_id: Optional[str] = None,
+    city_id: Optional[str] = None,
     limit: int = Query(100, ge=1, le=1000),
+    principal: Principal = Depends(get_principal),
 ) -> list[dict[str, Any]]:
-    return get_store().list_reviews(event_id=event_id, limit=limit)
+    return get_store().list_reviews(
+        event_id=event_id,
+        limit=limit,
+        city_id=optional_city_id(principal, city_id),
+    )
 
 
 @router.get("/work-orders")
 def list_work_orders(
     status: Optional[str] = None,
+    city_id: Optional[str] = None,
     limit: int = Query(100, ge=1, le=1000),
+    principal: Principal = Depends(get_principal),
 ) -> list[dict[str, Any]]:
-    return get_store().list_work_orders(status=status, limit=limit)
+    return get_store().list_work_orders(
+        status=status,
+        limit=limit,
+        city_id=optional_city_id(principal, city_id),
+    )
