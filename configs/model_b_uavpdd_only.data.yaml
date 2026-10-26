@@ -1,0 +1,10 @@
+path: data/datasets/uav_pdd2023
+train: images/train
+val: images/val
+# No held-out test split — UAV-PDD2023 is a single flat corpus, not clip-based like
+# our own footage. Use --split val for scripts/eval_aerial.py with this data.yaml.
+
+names:
+  0: pothole
+  1: road_crack
+  2: road_damage

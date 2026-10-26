@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from ultralytics.utils.tal import TaskAlignedAssigner
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +69,8 @@ def patch_tal_for_mps() -> bool:
     global _TAL_PATCHED
     if _TAL_PATCHED:
         return False
+    from ultralytics.utils.tal import TaskAlignedAssigner
+
     original = TaskAlignedAssigner.forward
 
     def forward(self, pd_scores, pd_bboxes, anc_points, gt_labels, gt_bboxes, mask_gt):

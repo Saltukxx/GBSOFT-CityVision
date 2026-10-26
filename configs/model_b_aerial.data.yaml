@@ -3,9 +3,11 @@ train: images/train
 val: images/val
 # hold-out (scripts/eval_aerial.py): clip3 → images/test
 test: images/test
+# split_manifest train=fbe0e8b33936e94ab0f75d65e1cf48aa4d33b7d1c16d22f5f44c1746a65d3252
+# split_manifest val=11f848d3b9b059ca752364ff0a9c27ead2096d4379e76323f057faf1d6a6f13e
+# split_manifest test=52f5ad0d80d2f5cdc5d816af82d52c4a2587b6aa14793496611694fd49f1da49
 
 names:
   0: pothole
   1: road_crack
-  2: manhole
-  3: road_damage
+  2: road_damage

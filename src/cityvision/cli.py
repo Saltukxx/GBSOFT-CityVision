@@ -23,11 +23,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="GPS sidecar: DJI SRT, CSV, JSON, or JSONL (else look next to --source)",
     )
     run.add_argument("--zones", default=None, help="GeoJSON zones for geofence")
-    run.add_argument("--vehicle-id", default=None, help="Asset id (drone/dock); alias of --drone-id")
+    run.add_argument("--vehicle-id", default=None, help="Deprecated schema alias of --drone-id")
     run.add_argument(
         "--drone-id",
         default=None,
-        help="Drone / dock asset id (writes vehicle_id)",
+        help="Drone / Dock asset id",
     )
     run.add_argument("--camera-id", default=None)
     run.add_argument(

@@ -48,6 +48,13 @@ BACKGROUND_CANDIDATES = DS / "background_candidates.txt"
 # our own rare-class frames, these already come in bulk.
 EXTERNAL_TRAIN_SOURCES = [ROOT / "data" / "datasets" / "uav_pdd2023"]
 NAMES = {0: "pothole", 1: "road_crack", 2: "manhole", 3: "road_damage"}
+# Exported training set drops manhole: it's handled by a separate dedicated model
+# (models/infra-b-road-svrdd.pt, HUD-only boxes, not a work-order class — see
+# docs/training-model-b.md's manhole labeling policy). labels_hand/ keeps the raw
+# hand-labeled manhole boxes untouched (still shown/drawable in the browser UI via
+# NAMES above) in case they're useful later; only export_yolo() filters them out.
+EXPORT_NAMES = {0: "pothole", 1: "road_crack", 2: "road_damage"}
+_RAW_TO_EXPORT_CLS = {0: 0, 1: 1, 3: 2}  # drop 2 (manhole); road_damage 3 -> 2
 EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 # Rare classes get duplicated in the train split so 10 crack boxes are not lost in the noise
 RARE_CLASSES = (0, 1)
@@ -509,6 +516,22 @@ def _read_boxes(name: str) -> list[dict]:
     return out
 
 
+def _export_boxes(name: str) -> list[dict]:
+    """Raw hand-labeled boxes, remapped to EXPORT_NAMES (manhole dropped, see above).
+
+    A frame hand-labeled with only a manhole box becomes an empty (background) export
+    label here, not a dropped frame — the human already reviewed it and found no
+    pothole/crack/damage, which is real hard-negative signal for this 3-class model.
+    """
+    out = []
+    for b in _read_boxes(name):
+        new_cls = _RAW_TO_EXPORT_CLS.get(b["cls"])
+        if new_cls is None:
+            continue
+        out.append({**b, "cls": new_cls})
+    return out
+
+
 def _write_boxes(name: str, boxes: list[dict]) -> None:
     path = _label_path(name)
     if not boxes:
@@ -600,7 +623,7 @@ def export_yolo() -> str:
         if split == "drop":
             dropped += 1
             continue
-        items.append((img, _read_boxes(img.name), split))
+        items.append((img, _export_boxes(img.name), split))
     if not any(boxes for _, boxes, _ in items):
         return "No labeled frames yet."
     items, bg_trimmed = _cap_train_background(items)
@@ -610,7 +633,7 @@ def export_yolo() -> str:
         if p.exists():
             shutil.rmtree(p)
 
-    stats = {n: 0 for n in NAMES.values()}
+    stats = {n: 0 for n in EXPORT_NAMES.values()}
     counts = {"train": 0, "val": 0, "test": 0}
     bg_counts = {"train": 0, "val": 0, "test": 0}
     oversampled = 0
@@ -625,14 +648,20 @@ def export_yolo() -> str:
         rare = any(int(b["cls"]) in RARE_CLASSES for b in boxes)
         if rare and split == "train":
             copies += [f"{img.stem}_ov{k}{img.suffix}" for k in range(1, RARE_OVERSAMPLE)]
+        # boxes are already remapped/filtered by _export_boxes — write them out directly
+        # rather than copying labels_hand/'s raw file (which still has manhole + old ids).
+        label_lines = [
+            f"{b['cls']} {b['xc']:.6f} {b['yc']:.6f} {b['w']:.6f} {b['h']:.6f}" for b in boxes
+        ]
         for dest_name in copies:
             dest = Path(dest_name)
             shutil.copy2(img, img_dir / dest.name)
             label_dest = lbl_dir / (dest.stem + ".txt")
-            if boxes:
-                shutil.copy2(_label_path(img.name), label_dest)
+            if label_lines:
+                label_dest.write_text("\n".join(label_lines) + "\n", encoding="utf-8")
             else:
-                # Empty label file = YOLO background image (hard negative)
+                # Empty label file = YOLO background image (hard negative) — also how a
+                # frame hand-labeled with only a manhole box ends up here (see _export_boxes).
                 label_dest.write_text("", encoding="utf-8")
         oversampled += len(copies) - 1
 
@@ -640,7 +669,7 @@ def export_yolo() -> str:
         if not boxes:
             bg_counts[split] += 1
         for b in boxes:
-            stats[NAMES[int(b["cls"])]] += len(copies)
+            stats[EXPORT_NAMES[b["cls"]]] += len(copies)
 
     external_added = 0
     for src_root in EXTERNAL_TRAIN_SOURCES:
@@ -659,15 +688,27 @@ def export_yolo() -> str:
             if not lbl.exists():
                 continue
             shutil.copy2(img, img_dir / img.name)
-            shutil.copy2(lbl, lbl_dir / lbl.name)
             counts["train"] += 1
             external_added += 1
-            boxes_text = lbl.read_text(encoding="utf-8").strip()
-            if not boxes_text:
+            # Same manhole-drop / road_damage-remap as our own boxes (_export_boxes) —
+            # external sources are written in the raw 4-class scheme by their own
+            # scripts/prepare_*.py, so copying the label file verbatim would be wrong here.
+            ext_lines = []
+            for line in lbl.read_text(encoding="utf-8").strip().splitlines():
+                parts = line.split()
+                if len(parts) != 5:
+                    continue
+                new_cls = _RAW_TO_EXPORT_CLS.get(int(parts[0]))
+                if new_cls is None:
+                    continue
+                ext_lines.append(" ".join([str(new_cls), *parts[1:]]))
+                stats[EXPORT_NAMES[new_cls]] += 1
+            dest_lbl = lbl_dir / lbl.name
+            if ext_lines:
+                dest_lbl.write_text("\n".join(ext_lines) + "\n", encoding="utf-8")
+            else:
+                dest_lbl.write_text("", encoding="utf-8")
                 bg_counts["train"] += 1
-                continue
-            for line in boxes_text.splitlines():
-                stats[NAMES[int(line.split()[0])]] += 1
 
     manifest = {
         split: split_manifest_sha(DS / "images" / split)
@@ -685,8 +726,7 @@ def export_yolo() -> str:
         "names:\n"
         "  0: pothole\n"
         "  1: road_crack\n"
-        "  2: manhole\n"
-        "  3: road_damage\n",
+        "  2: road_damage\n",
         encoding="utf-8",
     )
     msg = (

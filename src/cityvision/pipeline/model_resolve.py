@@ -15,6 +15,9 @@ class ModelBSpec:
 
     path: Path
     allowed_classes: Optional[tuple[str, ...]] = None
+    # RF-DETR (.pth) only — inference resolution, independent of Model A's imgsz.
+    # Ignored for Ultralytics (.pt) weights.
+    resolution: Optional[int] = None
 
     @property
     def name(self) -> str:
@@ -35,8 +38,10 @@ def _as_list(value: Any) -> List[str]:
     return [str(value)]
 
 
-def _parse_model_b_item(item: Any) -> Optional[tuple[str, Optional[tuple[str, ...]]]]:
-    """Return (path, allowed_classes) from a list string or {path, allowed_classes} map."""
+def _parse_model_b_item(
+    item: Any,
+) -> Optional[tuple[str, Optional[tuple[str, ...]], Optional[int]]]:
+    """Return (path, allowed_classes, resolution) from a list string or {path, ...} map."""
     if item is None or item is False:
         return None
     if isinstance(item, dict):
@@ -45,16 +50,17 @@ def _parse_model_b_item(item: Any) -> Optional[tuple[str, Optional[tuple[str, ..
             return None
         allowed = item.get("allowed_classes")
         if allowed is None:
-            return str(path), None
-        if isinstance(allowed, str):
+            classes = None
+        elif isinstance(allowed, str):
             classes = (allowed,) if allowed else ()
         else:
             classes = tuple(str(c) for c in allowed if c)
-        return str(path), classes or None
+        resolution = item.get("resolution")
+        return str(path), (classes or None), (int(resolution) if resolution else None)
     text = str(item).strip()
     if not text:
         return None
-    return text, None
+    return text, None, None
 
 
 def _resolve_existing(path: PathLike) -> Optional[Path]:
@@ -89,7 +95,11 @@ def resolve_model_b_paths(
     found: List[ModelBSpec] = []
     seen: set[str] = set()
 
-    def add(path: PathLike, allowed_classes: Optional[tuple[str, ...]] = None) -> None:
+    def add(
+        path: PathLike,
+        allowed_classes: Optional[tuple[str, ...]] = None,
+        resolution: Optional[int] = None,
+    ) -> None:
         resolved = _resolve_existing(path)
         if resolved is None:
             return
@@ -97,7 +107,9 @@ def resolve_model_b_paths(
         if key in seen:
             return
         seen.add(key)
-        found.append(ModelBSpec(path=resolved, allowed_classes=allowed_classes))
+        found.append(
+            ModelBSpec(path=resolved, allowed_classes=allowed_classes, resolution=resolution)
+        )
 
     if cli_model_b:
         add(cli_model_b)
@@ -113,7 +125,7 @@ def resolve_model_b_paths(
         parsed = _parse_model_b_item(item)
         if parsed is None:
             continue
-        add(parsed[0], parsed[1])
+        add(parsed[0], parsed[1], parsed[2])
 
     # legacy single field (may already be in list)
     if det_cfg.get("model_b"):
