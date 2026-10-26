@@ -6,7 +6,7 @@
 | ----- | ----- |
 | AR-GE | Laptop (MPS / CUDA) |
 | Saha pilot | Merkezi GPU; Dock/Fly videosu ofiste veya bulutta işlenir |
-| Sonraki faz | Jetson companion (onboard AI yok — MVP) |
+| Ölçekleme | İhtiyaca göre ayrılmış merkezi GPU worker veya görev bazlı bulut GPU |
 
 ## Drone / kamera
 
@@ -36,12 +36,12 @@ Her frame / event ile:
 timestamp, lat, lon, speed, heading, camera_id, vehicle_id
 ```
 
-`vehicle_id` drone / dock asset id’sidir (`DJI-01`).
+`vehicle_id`, mevcut veritabanındaki eski alan adıdır ve drone / Dock kimliğini taşır (`DJI-01`). Yeni istemciler `drone_id` gönderir.
 
 ## Depolama & ağ
 
 - Dock/laptop: ham MP4 + SRT  
-- 4G/5G veya ofis ağı: event paketi upload (tam video değil)  
+- 4G/5G veya ofis ağı: doğrudan nesne depoya devam edebilir çok parçalı yükleme
 - Evidence paketi hedefi: `event.jpg` + crop + ~15 sn clip + `event.json`
 
 ## Güç / çevre

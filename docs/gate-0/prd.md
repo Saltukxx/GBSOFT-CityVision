@@ -2,7 +2,7 @@
 
 **Ürün:** GBSoft City Vision  
 **Sürüm:** MVP / Pilot  
-**Süre hedefi:** 24 hafta  
+**Süre hedefi:** 8 hafta
 **Pilot:** 1 belediye · 1 izinli koridor · 1 Dock / drone · nadir grid + alçak doğrulama · 30 gün
 
 ## Problem
@@ -11,7 +11,7 @@ Belediyeler yol çukuru, çöp taşması ve yüzey hasarını çoğunlukla vatan
 
 ## Çözüm
 
-DJI Dock veya DJI Fly ile tekrarlanabilir koridor taraması; merkezi YOLO; cloud’da event fusion; operatöre tekil, doğrulanabilir olay ve iş emri adayı.
+DJI Dock veya DJI Fly ile tekrarlanabilir koridor taraması; merkezi hibrit yapay zekâ analizi; olay birleştirme; operatöre tekil, doğrulanabilir olay ve iş emri adayı.
 
 ## Değer cümlesi
 
@@ -26,8 +26,6 @@ DJI Dock veya DJI Fly ile tekrarlanabilir koridor taraması; merkezi YOLO; cloud
 
 ## Out of scope (MVP)
 
-- Trafik çizgisi / VPH sayımı (motor durur, varsayılan kapalı)  
-- Durak geofence / `potential_bus_stop_obstruction` (motor durur, varsayılan kapalı)  
 - Otomatik trafik cezası / EDS iddiası  
 - Parking / ANPR production  
 - Engelli rampası, tabela, sokak lambası (Phase II+)  
@@ -54,7 +52,7 @@ DJI Dock veya DJI Fly ile tekrarlanabilir koridor taraması; merkezi YOLO; cloud
 - Privacy by design: mümkün olduğunca event crop + kısa kanıt kliniği  
 - Her event’te `model_version`  
 - Human-in-the-loop zorunlu (ilk üretim)  
-- Merkezi GPU (Jetson onboard sonraki faz)
+- Merkezi veya görev bazlı bulut GPU
 
 ## Başarı (özet)
 

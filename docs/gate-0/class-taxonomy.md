@@ -6,18 +6,12 @@ Durum: taslak — Gate 0’da kilitleyin.
 
 AI önce **görsel sınıf** üretir. Belediye olayı (violation / work order) AI + GPS + GIS + business rules ile üretilir.
 
-## Model A — General Object Detection
+## Model A — Drone Context Detection
 
 | Class | Açıklama | MVP |
 | ----- | -------- | --- |
-| `car` | Binek otomobil | Evet |
-| `bus` | Belediye / yolcu otobüsü | Evet |
-| `truck` | Kamyon / kamyonet (büyük ticari) | Evet |
-| `motorcycle` | Motosiklet / scooter | Evet |
-| `person` | Yaya | Trafik KPI opsiyonel |
+| `person` | Yalnızca mahremiyet filtresi / hard-negative desteği | Yardımcı |
 | `trash_container` | Çöp konteyneri (normal doluluk) | Evet |
-| `traffic_sign` | Trafik / yön tabelası | Phase II hazırlığı |
-| `bus_stop` | Fiziksel durak yapısı (varsa) | Destekleyici |
 
 ## Model B — Infrastructure
 
@@ -74,23 +68,9 @@ Positive: yol kenarı / kaldırımda birikmiş atık yığını
 Negative: tek yaprak, küçük ambalaj (min size kalibre edilecek)
 ```
 
-### Bus stop obstruction (event, class değil — MVP kapalı)
-
-```text
-AI üretir: car|bus|truck|motorcycle (+ track)
-GIS üretir: vehicle_position ∈ BUS_STOP_zone
-Event: potential_bus_stop_obstruction
-Motor durur; geofence varsayılan kapalı. Drone durak işgali MVP değil.
-İlk sürüm otomatik ceza DEĞİL.
-```
-
 ## CVAT label listesi (kopyala-yapıştır)
 
 ```text
-car
-bus
-truck
-motorcycle
 person
 trash_container
 overflowing_container
@@ -99,11 +79,9 @@ pothole
 road_crack
 road_damage
 manhole
-bus_stop
-traffic_sign
 ```
 
 ## Mapping notu
 
-COCO pretrained modeller `car/bus/truck/motorcycle/person` ile bootstrap eder.
+COCO pretrained model `person` sınıfını mahremiyet ve hard-negative desteği için bootstrap eder.
 `pothole` / waste sınıfları **kendi dataset’imizle** fine-tune gerektirir.

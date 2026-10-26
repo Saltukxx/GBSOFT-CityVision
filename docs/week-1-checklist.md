@@ -11,8 +11,6 @@
 - [x] Tracking (ByteTrack)
 - [x] Min-area / conf discard filtreleri
 - [x] GPS sidecar + interpolasyon
-- [x] Geofence → potential bus stop obstruction
-- [x] Traffic counting (unique tracks, line cross, vpm/vph)
 - [x] Event fusion + composite confidence
 - [x] Evidence packs (jpg/crop/clip/json)
 - [x] HTML report (map + events)
@@ -22,14 +20,14 @@
 
 ## Senin sıradaki işler
 
-- [ ] Gerçek sokak videosu `data/samples/demo.mp4`
+- [ ] Gerçek drone videosu `data/samples/demo.mp4`
 - [ ] Gerçek GPS log eşleştir
 - [ ] CVAT + pothole/waste annotation
 - [ ] Model B fine-tune → `detection.model_b` path
 
 ## Henüz bilerek yok (sonraki faz)
 
-- FastAPI / PostGIS cloud backend
-- Jetson edge deploy
+- Devam edebilir çok parçalı nesne depo yüklemesi
+- GPU worker lease / heartbeat / retry
+- Kare ve aday bazlı detection index
 - MLflow registry
-- Canlı dashboard servisi (şu an static `report.html`)

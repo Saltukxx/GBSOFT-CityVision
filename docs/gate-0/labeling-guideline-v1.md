@@ -23,12 +23,6 @@ Rögar, her iki bakışta da **pothole hard-negative**: kapak görünüyorsa `ma
 
 ## Sınıf kuralları
 
-### Vehicles (`car` / `bus` / `truck` / `motorcycle`)
-
-- Araç büyük ölçüde görünür olmalı.  
-- Park / hareket fark etmez.  
-- Römorklu araçlarda ana gövdeyi etiketle.
-
 ### `pothole`
 
 - Kavite / malzeme kaybı zorunlu.  
@@ -58,11 +52,6 @@ Rögar, her iki bakışta da **pothole hard-negative**: kapak görünüyorsa `ma
 
 - Yığın / torba grubu.  
 - Tek küçük ambalajı yok say (min size sonra kalibre).
-
-### `bus_stop`
-
-- Fiziksel durak (işaret + sığınak).  
-- “Durak alanı işgali” event’i annotation değildir; GIS sonra bağlanır.
 
 ## Kalite kontrol
 

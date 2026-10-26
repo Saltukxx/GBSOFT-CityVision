@@ -12,8 +12,6 @@ Detection ≠ Event. Event, tekrarlayan gözlemler ve kurallar sonrası oluşan 
 | `road_damage` | Model B + fusion | Fen İşleri | Evet |
 | `overflowing_container` | Model B + fusion | Temizlik | Evet |
 | `street_waste` | Model B + fusion | Temizlik | Evet |
-| `potential_bus_stop_obstruction` | Vehicle det + GIS geofence | Zabıta | Motor var, **MVP kapalı** |
-| `traffic_density` | Tracking KPI (segment) | Ulaşım | Motor var, **MVP kapalı** |
 
 ## Ortak event şeması
 
@@ -35,7 +33,7 @@ Detection ≠ Event. Event, tekrarlayan gözlemler ve kurallar sonrası oluşan 
 }
 ```
 
-`vehicle_id` / `vehicle_ids` asset anahtarıdır (drone / dock id).
+`vehicle_id` / `vehicle_ids`, mevcut şemadaki eski alan adlarıdır ve drone / Dock kimliğini taşır. Yeni dış arayüzlerde `drone_id` kullanılır.
 
 ## Severity
 
@@ -54,7 +52,7 @@ Detection ≠ Event. Event, tekrarlayan gözlemler ve kurallar sonrası oluşan 
 | `0.85–0.95` | probable |
 | `> 0.95` | high confidence |
 
-Composite confidence: AI score + GPS kalitesi + tekrar gözlem + farklı araç doğrulaması.
+Composite confidence: AI skoru + hedef konumu kalitesi + farklı uçuşlardaki tekrar gözlem.
 
 ## Status lifecycle
 

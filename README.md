@@ -12,7 +12,7 @@ Drone video (+ DJI SRT GPS)
    → Human review feedback loop
 ```
 
-Varsayılan sensör **DJI drone** (`nadir` tarama veya `oblique` alçak inceleme). Trafik çizgisi ve durak geofence motoru durur; MVP’de kapalıdır.
+Tek görüntü kaynağı **DJI drone**dur (`nadir` tarama veya `oblique` alçak inceleme).
 
 ## Kurulum
 
@@ -44,16 +44,16 @@ python scripts/run_pipeline.py \
 
 - `detections.jsonl` — frame bazlı detection (+ GPS)
 - `events.json` — fused municipal events (`manhole` iş emri değildir)
-- `traffic.json` — boş (MVP’de trafik çizgisi kapalı)
+- `traffic.json` — geriye dönük çıktı sözleşmesi için boş uyumluluk dosyası
 - `evidence/<EVENT_ID>/` — event.jpg, crop, clip, event.json
 - `annotated.mp4` — HUD + bbox (count line yok)
 - `report.html` — operatör ekranı (harita + tablo)
 
 ## Backend (PostgreSQL + PostGIS + FastAPI)
 
-Plan §21 iskeleti: fleet, routes, events, observations, detections (özet), event_media, zones, users, work_orders, model_versions.
+Platform iskeleti: drone/Dock varlıkları, uçuş rotaları, events, observations, detections (özet), event_media, zones, users, work_orders, model_versions.
 
-`vehicle_id` API/DB’de asset anahtarıdır (drone / dock id).
+`vehicle_id` mevcut API/DB şemasında korunan eski alan adıdır; yalnızca drone / Dock kimliğini taşır. Yeni dış arayüzlerde `drone_id` kullanılır.
 
 ```bash
 docker compose up -d db
@@ -71,7 +71,7 @@ python scripts/serve_api.py --port 8088
   - Olay detay: http://127.0.0.1:8088/events/{id}
 - OpenAPI: http://127.0.0.1:8088/docs
 - Health: `/health` · KPIs: `/api/kpis`
-- Fleet: `/api/vehicles` `/api/cameras` `/api/routes` `/api/assets`
+- Drone varlıkları ve rotalar: `/api/assets` `/api/routes` (eski uyumluluk uçları: `/api/vehicles`, `/api/cameras`)
 - Events: `/api/events` `/api/events/{id}` (media + observations)
 - Media: `/api/media/{id}` · Object store: `/api/storage/evidence/...`
 - Async jobs: `POST /api/jobs/ingest` → `GET /api/jobs/{id}`
@@ -87,14 +87,13 @@ python scripts/serve_api.py --port 8088
     laptop demosu için uygun, kurulum için değil.
   - Dashboard'da token: tarayıcı konsolundan `CV.setToken("<jwt>")` veya
     `?token=<jwt>` query parametresi (localStorage'a yazılır).
-- **Drone upload (pilot, onboard Jetson yok):** Dock/Fly MP4+SRT → merkezi YOLO
+- **Drone upload:** Dock/Fly MP4+SRT → merkezi analiz
   - Admin: `POST /api/edge/devices` (token bir kez)
   - Device: `POST /api/edge/heartbeat`, `POST /api/edge/video` (`file` mp4 + optional `gps` jsonl) + `X-Edge-Token`
   - Status: `GET /api/edge/video/{upload_id}` → job `analyze_video` → pipeline → ingest/merge
   - Lab uploader: `python -m cityvision.edge.agent upload --video seg.mp4 --gps gps.jsonl --token … --outbox`
   - GPS sidecar: DJI `.SRT`, JSONL `{"timestamp_ms":0,"lat":39.9,"lon":41.27}` veya CSV `timestamp_ms,lat,lon`
-  - Jetson on-device AI: **faz-2** (şimdi yok); events zip upload API ileride edge için duruyor
-- Edge events zip (faz-2 / hazır API): `POST /api/edge/upload` → `GET /api/edge/uploads/{id}`
+- Geriye dönük paket yükleme API'si: `POST /api/edge/upload` → `GET /api/edge/uploads/{id}`
 - Local jobs without Redis: `CITYVISION_JOB_INLINE=1`
 - Audit: `GET /api/audit` · CSV: `GET /api/events/export.csv` · Job SSE: `/api/jobs/{id}/stream`
 - Zones: `python scripts/ingest_zones.py …` · Review DB: `cityvision review … --db`
