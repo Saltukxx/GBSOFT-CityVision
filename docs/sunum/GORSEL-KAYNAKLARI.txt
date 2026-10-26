@@ -33,4 +33,61 @@ waste.jpg            | stack overflow (taşmış konteyner)| nicolasnova        
   dışa açık yayımda aynı lisansla paylaşım koşulu doğar. Kurum içi sunumda sorun değil.
 * Sunumda görünen tüm yüzler ve plakalar maskelenmiştir (KVKK / ürün özelliği gösterimi).
 * Ticari teklif versiyonu için önerilen: Oltu ve Kars'ta çekilecek kendi saha fotoğraflarınız
-  + araç üstü kamera kayıtlarından alınmış gerçek tespit kareleri.
+  + izinli drone uçuşlarından alınmış gerçek tespit kareleri.
+
+— 2026-08-30 · DRONE SUNUMU İÇİN ÜRETİLEN TEMSİLİ GÖRSELLER —————————
+cityvision-matrice-4td-belediye-v1.png | Matrice 4TD sınıfı drone + otonom istasyon + Türkiye kent görünümü | OpenAI ImageGen | Fotogerçekçi temsili sunum görseli; teknik kanıt değildir
+cityvision-kaldirim-isgali-v1.png      | Kaldırım işgali, oblique drone açısı                                  | OpenAI ImageGen | Fotogerçekçi temsili sunum görseli
+cityvision-konteyner-tasma-v1.png      | Taşmış konteyner ve yanına bırakılan atık, oblique drone açısı         | OpenAI ImageGen | Fotogerçekçi temsili sunum görseli
+
+Matrice 4TD ürün özellikleri ve DJI ekosistem iddiaları için resmî kaynaklar:
+* https://enterprise.dji.com/dock-3/specs
+* https://enterprise.dji.com/dock-3/faq
+* https://enterprise.dji.com/dock-3/downloads
+* https://enterprise.dji.com/flighthub-2
+* https://enterprise.dji.com/flighthub-2/faq
+
+ImageGen istem özeti:
+* Matrice 4TD: Dock 3 benzeri istasyondan kalkış yapan, Türkiye belediye dokusunda, 16:9 ve fotogerçekçi endüstriyel drone sahnesi; metin/logo/UI yok.
+* Kaldırım işgali: masa, ürün, scooter ve malzemelerle daralan yaya geçişini gösteren 35 derece oblique fotogerçekçi drone görüntüsü; tespit kutusu/metin yok.
+* Konteyner taşması: dolu konteyner ve yanına bırakılan atıkları gösteren 35 derece oblique fotogerçekçi drone görüntüsü; tespit kutusu/metin yok.
+
+— 2026-08-30 · TALEP DÖNGÜSÜ İÇİN ÜRETİLEN TEMSİLİ GÖRSELLER —————————
+cityvision-talep-dongusu-01-v1.png | Vatandaşın yol hasarı / su kaçağını telefonla bildirmesi            | OpenAI ImageGen | Fotogerçekçi temsili sunum görseli
+cityvision-talep-dongusu-02-v1.png | Belediye operasyon merkezinde AI destekli sınıflandırma             | OpenAI ImageGen | Fotogerçekçi temsili sunum görseli
+cityvision-talep-dongusu-03-v1.png | Belediye saha ekibinin hasarlı asfaltı onarması                      | OpenAI ImageGen | Fotogerçekçi temsili sunum görseli
+cityvision-talep-dongusu-04-v1.png | Saha sorumlusunun tamamlanan işi doğrulaması ve vatandaş bildirimi  | OpenAI ImageGen | Fotogerçekçi temsili sunum görseli
+
+ImageGen istem özeti (yerleşik üretim modu):
+* Talep: Türkiye'de bir mahalle sokağında vatandaşın su kaçağı ve hasarlı asfaltı akıllı telefonuyla belgelemesi; doğal ışık, belgesel fotoğraf estetiği, yazı/logo yok.
+* Anla: Türkiye belediyesine ait çağdaş operasyon merkezinde çift ekranla talep inceleyen görevli; harita ve soyut sınıflandırma göstergeleri, okunabilir metin/logo yok.
+* Müdahale: Belediyeye ait saha ekibinin şehir sokağında güvenli çalışma alanı kurarak hasarlı asfaltı onarması; gerçekçi ekipman ve iş güvenliği, yazı/logo yok.
+* Doğrula: Saha sorumlusunun onarılan asfaltı tabletle fotoğraflaması, arka planda telefonundan bildirim alan vatandaş; doğal ışık, yazı/logo yok.
+
+— 2026-08-30 · OPERASYON VE GÜVENLİK SAYFALARI ————————————————————
+cityvision-dock3-belediye-catisi-v1.png       | Belediye binası çatısında DJI Dock 3 ve Matrice 4TD       | OpenAI ImageGen + resmî DJI ürün görselleri | Fotogerçekçi temsili sunum görseli
+cityvision-kontrol-merkezi-iki-ekran-v1.png   | İki ekranlı sade kontrol merkezi: rota + görsel analiz     | OpenAI ImageGen                              | Fotogerçekçi temsili sunum görseli
+cityvision-guvenli-ucus-koridoru-v1.png       | İzinli uçuş koridoru, kısıtlı alanlar, Dock 3 ve 4TD       | OpenAI ImageGen + resmî DJI ürün görselleri | Fotogerçekçi temsili sunum görseli
+
+Ürün biçimi için kullanılan resmî DJI referansları:
+* https://enterprise.dji.com/dock-3
+* https://www.dji.com/media-center/announcements/dji-release-dock-3
+* https://www-cdn.djiits.com/cms/uploads/a046ed075857f342eaafba412773f589.jpg
+* https://www-cdn.djiits.com/cms/uploads/d27e7c622faf8a68db37ba8ba4b465ec.jpg
+
+ImageGen istem özeti (yerleşik üretim modu):
+* Çatı kurulumu: Resmî DJI referanslarındaki iki yana açılan Dock 3 ve Matrice 4TD ürün geometrisi korunarak, Türkiye'de bir belediye binasının düz çatısında sabit kurulum; gündüz, fotogerçekçi.
+* Kontrol merkezi: Tam olarak iki monitör; sol ekranda sade rota, sağ ekranda yol bozukluğu ve taşmış konteyner için görsel analiz; tek operatör, gündüz, ek ekran yok.
+* Güvenli koridor: Resmî DJI ürün geometrisiyle Matrice 4TD ve Dock 3; gündüz şehir sahnesi, hafif yeşil izinli koridor ve kırmızı görev dışı alan katmanı.
+
+— 2026-08-30 · KAPAK, WHATSAPP VE ROTA GÖRSELLERİ ————————————————
+cityvision-kapak-akilli-sehir-v1.png     | Erzurum kent görünümü, Matrice 4TD ve çatıdaki Dock 3      | OpenAI ImageGen + resmî DJI ürün görselleri | Fotogerçekçi temsili sunum görseli
+cityvision-whatsapp-vatandas-v1.png     | Vatandaşın WhatsApp ile yol sorunu, fotoğraf ve konum iletmesi | OpenAI ImageGen                           | Fotogerçekçi temsili sunum görseli
+cityvision-beyaz-masa-v1.png            | Beyaz Masa görevlisinin mesajı numaralı talebe dönüştürmesi | OpenAI ImageGen                              | Fotogerçekçi temsili sunum görseli
+cityvision-rota-karsilastirma-v1.png     | Aynı kent haritasında klasik ve optimize belediye rotası   | OpenAI ImageGen                              | Fotogerçekçi harita görselleştirmesi
+
+ImageGen istem özeti (yerleşik üretim modu):
+* Kapak: Resmî DJI referanslarıyla Matrice 4TD ve iki kapaklı Dock 3; Erzurum benzeri doğu Türkiye kent dokusu, gündüz/gün batımına yakın doğal ışık, solda sunum metni için sakin alan.
+* WhatsApp: Vatandaşın gerçek yol bozukluğunu fotoğraf ve konumla yeşil mesajlaşma arayüzünden iletmesi; doğal gündüz ışığı, okunamaz sahte metin yok.
+* Beyaz Masa: Tek görevli ve tek monitör; mesaj, yol fotoğrafı, konum ve numaralı talep kartı; sade belediye ofisi.
+* Rota: Aynı uydu kent dokusunun iki eş paneli; aynı altı durakta solda çakışan kırmızı rotalar, sağda kısa ve düzenli yeşil rota; metin/etiket yok.

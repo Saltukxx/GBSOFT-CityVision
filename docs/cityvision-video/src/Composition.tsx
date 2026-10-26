@@ -1,9 +1,8 @@
-import {Audio} from "@remotion/media";
 import {TransitionSeries, linearTiming} from "@remotion/transitions";
 import {fade} from "@remotion/transitions/fade";
 import {slide} from "@remotion/transitions/slide";
 import {wipe} from "@remotion/transitions/wipe";
-import {AbsoluteFill, staticFile} from "remotion";
+import {AbsoluteFill} from "remotion";
 import {Scene01Hook} from "./scenes/Scene01Hook";
 import {Scene02Problem} from "./scenes/Scene02Problem";
 import {Scene03Sensor} from "./scenes/Scene03Sensor";
@@ -29,7 +28,7 @@ export const CityVisionVideo: React.FC = () => {
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={slide({direction: "from-right"})} timing={transitionTiming} />
 
-        <TransitionSeries.Sequence durationInFrames={390} name="Araçlar şehir sensörüne dönüşür">
+        <TransitionSeries.Sequence durationInFrames={390} name="Tekrarlanabilir drone uçuşu">
           <Scene03Sensor />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={wipe({direction: "from-left"})} timing={transitionTiming} />
@@ -58,17 +57,6 @@ export const CityVisionVideo: React.FC = () => {
           <Scene08Cta />
         </TransitionSeries.Sequence>
       </TransitionSeries>
-
-      <Audio
-        src={staticFile("voiceover.wav")}
-        volume={(frame) =>
-          frame < 20
-            ? frame / 20
-            : frame > 2650
-              ? Math.max(0, (2700 - frame) / 50)
-              : 1
-        }
-      />
     </AbsoluteFill>
   );
 };

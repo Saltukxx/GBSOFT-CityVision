@@ -10,7 +10,7 @@ export const Scene08Cta: React.FC = () => {
       <div style={{position: "absolute", left: 82, top: 220}}>
         <Reveal delay={5}>
           <div style={{fontSize: 94, lineHeight: 0.98, color: COLORS.white, fontWeight: 790, letterSpacing: -4, maxWidth: 1000}}>
-            Tek bir otobüsle başlayalım.
+            Tek bir drone koridoruyla başlayalım.
           </div>
         </Reveal>
         <Reveal delay={38}>
@@ -19,7 +19,7 @@ export const Scene08Cta: React.FC = () => {
           </div>
         </Reveal>
         <Reveal delay={80} style={{display: "flex", gap: 22, marginTop: 52}}>
-          {["1 GÜZERGÂH", "1–2 ARAÇ", "30 GÜN CANLI PİLOT"].map((item) => (
+          {["1 İZİNLİ KORİDOR", "1 DRONE / DOCK", "30 GÜN KONTROLLÜ PİLOT"].map((item) => (
             <div key={item} style={{padding: "20px 25px", borderRadius: 14, backgroundColor: "rgba(7,18,38,.78)", border: `2px solid ${COLORS.cyan}77`, color: COLORS.white, fontSize: 23, fontWeight: 840}}>{item}</div>
           ))}
         </Reveal>

@@ -24,7 +24,7 @@ const TRACK = ["OLAY AÇILDI", "EKİBE ATANDI", "EKİP YOLDA"];
 
 const STATS: [string, string][] = [
   ["0", "EK PERSONEL"],
-  ["0", "YENİ ARAÇ"],
+  ["0", "OTOMATİK KARAR"],
   ["1", "İŞ EMRİ"],
 ];
 

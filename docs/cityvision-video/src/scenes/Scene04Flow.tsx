@@ -2,8 +2,8 @@ import {AbsoluteFill, Easing, interpolate, useCurrentFrame} from "remotion";
 import {Brand, COLORS, Eyebrow, FooterLine, NoiseGrid, Reveal} from "../shared";
 
 const steps = [
-  {n: "01", title: "GÖR", desc: "Araç üstü kamera", color: COLORS.cyan},
-  {n: "02", title: "ANLA", desc: "Araç içinde analiz", color: COLORS.violet},
+  {n: "01", title: "GÖR", desc: "Planlı drone uçuşu", color: COLORS.cyan},
+  {n: "02", title: "ANLA", desc: "Merkezi GPU analizi", color: COLORS.violet},
   {n: "03", title: "DOĞRULA", desc: "Konum + tekrar gözlem", color: COLORS.yellow},
   {n: "04", title: "HAREKETE GEÇ", desc: "İş emri ve ekip", color: COLORS.green},
 ];
@@ -57,7 +57,7 @@ export const Scene04Flow: React.FC = () => {
         }}
       />
       <Reveal delay={270} style={{position: "absolute", left: 82, top: 865, color: COLORS.white, fontSize: 36, fontWeight: 650}}>
-        Yüzler ve plakalar maskelenir. Ham video araçtan çıkmaz.
+        Ham uçuş medyası korumalı depoda; dashboard'da yalnızca gerekli kanıt.
       </Reveal>
       <FooterLine />
     </AbsoluteFill>

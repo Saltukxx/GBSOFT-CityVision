@@ -12,13 +12,13 @@ import {S06Dispatch} from "./scenes/S06Dispatch";
 import {S07Impact} from "./scenes/S07Impact";
 import {S08Close} from "./scenes/S08Close";
 import {C} from "./theme";
-import {MUSIC, SCENE_DURATIONS, TOTAL, TRANSITION, VO, VOICE_GAIN} from "./timing";
+import {MUSIC, SCENE_DURATIONS, TOTAL, TRANSITION} from "./timing";
 
 const SCENES = [
-  {name: "01 · Şehri zaten geziyorlar", C: S01Hook},
+  {name: "01 · Planlı drone taraması", C: S01Hook},
   {name: "02 · Ne tespit ediyor", C: S02Detections},
-  {name: "03 · Mevcut araca kamera", C: S03Sensor},
-  {name: "04 · Araçta analiz, merkeze kayıt", C: S04Pipeline},
+  {name: "03 · Tekrarlanabilir uçuş", C: S03Sensor},
+  {name: "04 · Merkezi analiz ve kayıt", C: S04Pipeline},
   {name: "05 · Üç gözlem, tek olay", C: S05Fusion},
   {name: "06 · İş emri ve yönlendirme", C: S06Dispatch},
   {name: "07 · Kapsama ve erken tespit", C: S07Impact},
@@ -31,7 +31,7 @@ const SCENES = [
  */
 const timing = linearTiming({durationInFrames: TRANSITION});
 
-export const CityVisionReel: React.FC<{withAudio?: boolean}> = ({withAudio = true}) => (
+export const CityVisionReel: React.FC<{withAudio?: boolean}> = ({withAudio = false}) => (
   <AbsoluteFill style={{backgroundColor: C.ink}}>
     <TransitionSeries>
       {SCENES.flatMap((scene, i) => {
@@ -49,12 +49,6 @@ export const CityVisionReel: React.FC<{withAudio?: boolean}> = ({withAudio = tru
 
     {withAudio ? (
       <>
-        <Audio
-          src={staticFile("voiceover-tr.mp3")}
-          volume={(f) =>
-            VOICE_GAIN * (f < 8 ? f / 8 : f > VO.end ? Math.max(0, 1 - (f - VO.end) / 24) : 1)
-          }
-        />
         {/* Müzik yatağı: anlatım altında kısık, kapanışta biraz açılıp sönüyor. */}
         <Audio
           src={staticFile("muzik-lightbeats.mp3")}

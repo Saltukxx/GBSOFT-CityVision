@@ -4,7 +4,7 @@ import {C, FONT, G, clamp, ease, inAt, monoLabel} from "../theme";
 import {VO, localOf} from "../timing";
 
 /**
- * Anlatım: "Aynı sorun farklı araçlar tarafından yeniden görüldüğünde kayıtlar
+ * Anlatım: "Aynı sorun tekrarlı uçuşlarda yeniden görüldüğünde kayıtlar
  * tek bir olay altında birleştiriliyor." + "Bu sayede aynı sorun için birden
  * fazla iş emri oluşturulmuyor."
  */
@@ -12,9 +12,9 @@ import {VO, localOf} from "../timing";
 const NO_DUP_AT = localOf(4, VO.s08);
 
 const OBS = [
-  {src: "gorseller/06-yol-hasari-gozlem-01.png", vehicle: "25-BSK-118", time: "08:41", score: "%81"},
-  {src: "gorseller/07-yol-hasari-gozlem-02.png", vehicle: "25-ZBT-207", time: "11:06", score: "%88"},
-  {src: "gorseller/08-yol-hasari-gozlem-03.png", vehicle: "25-ÇÖP-044", time: "16:22", score: "%93"},
+  {src: "gorseller/06-yol-hasari-gozlem-01.png", source: "UÇUŞ-001", time: "08:41", score: "%81"},
+  {src: "gorseller/07-yol-hasari-gozlem-02.png", source: "UÇUŞ-002", time: "11:06", score: "%88"},
+  {src: "gorseller/08-yol-hasari-gozlem-03.png", source: "UÇUŞ-003", time: "16:22", score: "%93"},
 ];
 
 const THUMB = 268;
@@ -34,7 +34,7 @@ export const S05Fusion: React.FC = () => {
       <ProgressRail index={4} />
 
       <Eyebrow color={C.ok}>MÜKERRER KAYIT ÖNLEME</Eyebrow>
-      <Headline lines={["Üç ayrı araç,", {t: "tek olay.", c: C.ok}]} size={82} delay={5} />
+      <Headline lines={["Üç ayrı uçuş,", {t: "tek olay.", c: C.ok}]} size={82} delay={5} />
       <SubLine top={486} delay={20} width={850}>
         Aynı noktada tekrar görülen sorun yeni bir kayıt açmaz; mevcut olayın güvenini yükseltir.
       </SubLine>
@@ -52,7 +52,7 @@ export const S05Fusion: React.FC = () => {
             </div>
             <div style={{marginTop: 14, ...monoLabel(15, C.dim)}}>GÖZLEM 0{i + 1}</div>
             <div style={{marginTop: 9, fontFamily: FONT.mono, fontSize: 17, color: C.faint, lineHeight: 1.55}}>
-              {o.vehicle}
+              {o.source}
               <br />
               {o.time} · {o.score}
             </div>
@@ -122,7 +122,7 @@ export const S05Fusion: React.FC = () => {
 
         <div style={{margin: "26px 32px 0", height: 1, backgroundColor: C.line}} />
         <div style={{padding: "20px 32px 26px", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-          <span style={monoLabel(16, C.dim)}>KAYNAK: 3 ARAÇ · 3 GÖZLEM</span>
+          <span style={monoLabel(16, C.dim)}>KAYNAK: 3 UÇUŞ · 3 GÖZLEM</span>
           <span style={{...monoLabel(16, C.ok)}}>TEK OLAY</span>
         </div>
       </div>

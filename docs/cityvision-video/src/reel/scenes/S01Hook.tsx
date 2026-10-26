@@ -18,10 +18,10 @@ export const S01Hook: React.FC = () => {
       <BrandRow section="01 / 08" />
       <ProgressRail index={0} />
 
-      {/* Beat 1 — araçlar zaten oradalar */}
+      {/* Beat 1 — aynı koridor düzenli taranıyor */}
       <div style={{opacity: outA}}>
         <Eyebrow>HER GÜN · AYNI SOKAKLAR</Eyebrow>
-        <Headline lines={["ŞEHRİ", "ZATEN", "GEZİYORLAR."]} size={112} lineHeight={0.92} delay={6} />
+        <Headline lines={["AYNI ROTAYI", "YENİDEN", "TARIYOR."]} size={112} lineHeight={0.92} delay={6} />
       </div>
 
       {/* Beat 2 — artık görüyorlar */}
@@ -58,7 +58,7 @@ export const S01Hook: React.FC = () => {
           opacity: inAt(frame, BEAT + 40, 20),
         }}
       >
-        <span style={{fontFamily: FONT.mono, fontSize: 19, color: C.dim, letterSpacing: 1.2}}>25-BSK-118 · 08:41</span>
+        <span style={{fontFamily: FONT.mono, fontSize: 19, color: C.dim, letterSpacing: 1.2}}>DJI-DOCK-01 · 08:41</span>
         <span style={monoLabel(17, C.faint)}>39.90861 N / 41.26722 E</span>
       </div>
     </Stage>

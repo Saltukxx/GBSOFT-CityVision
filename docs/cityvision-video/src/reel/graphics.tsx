@@ -251,7 +251,7 @@ export const RouteMap: React.FC<{w?: number; h?: number; delay?: number}> = ({w 
           <rect x={PTS[9][0] - 7} y={PTS[9][1] - 7} width="14" height="14" fill="#060B14" stroke={C.accent} strokeWidth="2.5" />
         </g>
 
-        {/* tespit iğneleri — araç geçtikçe düşer */}
+        {/* tespit iğneleri — drone rota üzerinde ilerledikçe düşer */}
         {pins.map(([x, y, at], i) => {
           const p = interpolate(draw, [at, at + 0.08], [0, 1], clamp);
           return (
@@ -262,7 +262,7 @@ export const RouteMap: React.FC<{w?: number; h?: number; delay?: number}> = ({w 
           );
         })}
 
-        <RouteVehicle progress={draw} />
+        <RouteDrone progress={draw} />
 
         {/* ölçek ve yön — güzergâhın uzağında, sağ alt köşede */}
         <g opacity="0.8">
@@ -282,8 +282,8 @@ export const RouteMap: React.FC<{w?: number; h?: number; delay?: number}> = ({w 
   );
 };
 
-/** Güzergâh üzerinde ilerleyen araç işareti. */
-const RouteVehicle: React.FC<{progress: number}> = ({progress}) => {
+/** Uçuş koridoru üzerinde ilerleyen drone işareti. */
+const RouteDrone: React.FC<{progress: number}> = ({progress}) => {
   const pts = PTS;
   const segs = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
   const total = segs.reduce((a, b) => a + b, 0);
@@ -353,7 +353,7 @@ export const CoverageChart: React.FC<{w?: number; h?: number; delay?: number}> =
         HAFTALIK YOL AĞI KAPSAMASI
       </text>
       <text x={VW} y="16" textAnchor="end" fill={C.faint} fontFamily={FONT.mono} fontSize="15" letterSpacing="1.2">
-        1 HAT · 2 ARAÇ · 30 GÜN
+        1 KORİDOR · 1 DRONE · 30 GÜN
       </text>
       <line x1="0" y1="30" x2={VW} y2="30" stroke={C.line} strokeWidth="1" />
 

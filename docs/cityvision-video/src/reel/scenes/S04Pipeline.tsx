@@ -4,23 +4,23 @@ import {C, FONT, G, clamp, ease, inAt, monoLabel} from "../theme";
 import {VO, localOf} from "../timing";
 
 /**
- * Anlatım: "Toplanan görüntüler araç içerisinde analiz ediliyor." +
+ * Anlatım: "Uçuş tamamlandığında görüntüler merkezi sistemde analiz ediliyor." +
  * "Tespit edilen her sorun konumu ve görüntüsüyle birlikte sisteme kaydediliyor."
  */
 
 const RECORD_AT = localOf(3, VO.s06); // ikinci cümlede olay kaydı açılır
 
 const STEPS = [
-  {n: "01", t: "TARA", d: "Kamera güzergâh boyunca yolu ve çevreyi görüntüler.", tag: "SÜREKLİ", c: C.accent},
-  {n: "02", t: "ANALİZ ET", d: "Görüntü araç içindeki edge donanımda işlenir.", tag: "~40 ms", c: C.accent},
-  {n: "03", t: "KAYDA GEÇ", d: "Olay tipi, konum ve kanıt karesi merkeze gider.", tag: "OTOMATİK", c: C.ok},
+  {n: "01", t: "UÇ", d: "Drone tanımlı koridoru standart profille görüntüler.", tag: "PLANLI", c: C.accent},
+  {n: "02", t: "ANALİZ ET", d: "Uçuş görüntüsü merkezi GPU görevinde işlenir.", tag: "ASENKRON", c: C.accent},
+  {n: "03", t: "KAYDA GEÇ", d: "Olay tipi, tahmini konum ve kanıt karesi indekse yazılır.", tag: "OTOMATİK", c: C.ok},
 ];
 
 const RECORD: [string, string][] = [
   ["tip", "yol_yuzey_hasari"],
   ["konum", "39.90861 N / 41.26722 E"],
   ["zaman", "13.08.2026 · 08:41"],
-  ["araç", "25-BSK-118 / KAM-01"],
+  ["drone", "DJI-DOCK-01 / AERIAL"],
   ["güven", "%94"],
   ["kanıt", "kare + 6 sn video"],
 ];
@@ -43,8 +43,8 @@ export const S04Pipeline: React.FC = () => {
       <BrandRow section="04 / 08" />
       <ProgressRail index={3} />
 
-      <Eyebrow>ARAÇ İÇİNDE ANALİZ</Eyebrow>
-      <Headline lines={["Görüntü araçta kalır,", {t: "olay merkeze gider.", c: C.ok}]} size={62} delay={5} />
+      <Eyebrow>MERKEZİ GÖRÜNTÜ ANALİZİ</Eyebrow>
+      <Headline lines={["Uçuş tamamlanır,", {t: "olaylar haritaya düşer.", c: C.ok}]} size={62} delay={5} />
 
       <svg viewBox={`0 0 ${G.W} ${G.H}`} style={{position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 20}}>
         <line x1={RAIL_X} y1={railTop} x2={RAIL_X} y2={railBottom} stroke={C.line} strokeWidth="2" />
@@ -147,7 +147,7 @@ export const S04Pipeline: React.FC = () => {
         </div>
       </div>
 
-      <FooterNote text="HAM VİDEO ARAÇTAN ÇIKMAZ · YALNIZCA OLAY VE KANIT KARESİ" delay={RECORD_AT + 42} />
+      <FooterNote text="HAM VİDEO KORUMALI DEPOYA · DASHBOARD'A YALNIZCA OLAY VE KANIT" delay={RECORD_AT + 42} />
     </Stage>
   );
 };

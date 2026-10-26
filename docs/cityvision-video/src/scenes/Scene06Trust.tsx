@@ -69,7 +69,7 @@ export const Scene06Trust: React.FC = () => {
         <div style={{color: COLORS.green, fontSize: 21, fontWeight: 900, letterSpacing: 4}}>TEK ŞEHİR OLAYI</div>
         <div style={{color: COLORS.white, fontSize: 52, fontWeight: 850, marginTop: 28}}>POT-18222</div>
         <div style={{display: "flex", gap: 52, marginTop: 42}}>
-          <div><div style={{color: COLORS.muted, fontSize: 19}}>GÖZLEM</div><div style={{color: COLORS.white, fontSize: 44, fontWeight: 880}}>3 araç · 4 kez</div></div>
+          <div><div style={{color: COLORS.muted, fontSize: 19}}>GÖZLEM</div><div style={{color: COLORS.white, fontSize: 44, fontWeight: 880}}>3 uçuş · 4 kez</div></div>
           <div><div style={{color: COLORS.muted, fontSize: 19}}>GÜVEN</div><div style={{color: COLORS.green, fontSize: 52, fontWeight: 900}}>%97</div></div>
         </div>
         <div style={{marginTop: 34, color: COLORS.muted, fontSize: 25}}>Emin değilse iş emri açmaz.</div>

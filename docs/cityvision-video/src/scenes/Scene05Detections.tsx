@@ -4,8 +4,8 @@ import {Brand, COLORS, DetectionBox, FooterLine, Reveal} from "../shared";
 const items = [
   {src: "assets/pothole_close.jpg", title: "Yol çukuru ve yüzey hasarı", score: "%96", color: COLORS.red},
   {src: "assets/waste.jpg", title: "Taşmış konteyner ve atık", score: "%91", color: COLORS.yellow},
-  {src: "assets/detect.jpg", title: "Durak ve yol işgali", score: "%86", color: COLORS.violet},
-  {src: "assets/fleet.jpg", title: "Trafik ve yanlış park", score: "%88", color: COLORS.cyan},
+  {src: "assets/road_wide.jpg", title: "Geniş yol yüzeyi bozulması", score: "%86", color: COLORS.violet},
+  {src: "assets/detect.jpg", title: "Kaçak döküm ve moloz", score: "%88", color: COLORS.cyan},
 ];
 
 export const Scene05Detections: React.FC = () => {
@@ -40,7 +40,7 @@ export const Scene05Detections: React.FC = () => {
                 <div style={{color: item.color, fontSize: 34, fontWeight: 900}}>{item.score}</div>
               </div>
               {index === 0 ? <DetectionBox label="YÜZEY HASARI" confidence={item.score} top={90} left={220} width={250} height={120} color={item.color} delay={delay + 25} /> : null}
-              {index === 2 ? <DetectionBox label="İŞGAL ADAYI" confidence={item.score} top={105} left={330} width={290} height={135} color={item.color} delay={delay + 25} /> : null}
+              {index === 2 ? <DetectionBox label="YÜZEY BOZULMASI" confidence={item.score} top={105} left={330} width={290} height={135} color={item.color} delay={delay + 25} /> : null}
             </div>
           );
         })}

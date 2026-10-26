@@ -3,11 +3,11 @@ import {Backdrop, BrandRow, Eyebrow, FooterNote, Headline, Panel, ProgressRail, 
 import {Annotation, RouteMap} from "../graphics";
 import {C, FONT, G, inAt, monoLabel} from "../theme";
 
-/** Anlatım: "Mevcut araçlara yerleştirilen kameralar yolculuk sırasında çevreyi izliyor." */
+/** Anlatım: "Drone, tanımlı koridoru aynı uçuş parametreleriyle tekrar tarıyor." */
 
 const SPECS: [string, string, string][] = [
-  ["1080p · 15 fps", "ARAÇ ÜSTÜ KAMERA", C.accent],
-  ["12.4 km", "GÜNLÜK GÜZERGÂH", C.accent],
+  ["4K · 30 fps", "DRONE KAMERASI", C.accent],
+  ["12.4 km", "UÇUŞ KORİDORU", C.accent],
   ["MASKELİ", "YÜZ VE PLAKA", C.ok],
 ];
 
@@ -17,12 +17,12 @@ export const S03Sensor: React.FC = () => {
   const frame = useCurrentFrame();
   return (
     <Stage>
-      <Backdrop src="gorseller/05-mobil-sehir-sensoru-otobus.png" from={1.02} to={1.06} topScrim={0.91} bottomScrim={0.94} />
+      <Backdrop src="gorseller/01-yol-yuzey-hasari-genis.png" from={1.02} to={1.06} topScrim={0.91} bottomScrim={0.94} />
       <BrandRow section="03 / 08" />
       <ProgressRail index={2} />
 
-      <Eyebrow>MOBİL ŞEHİR SENSÖRÜ</Eyebrow>
-      <Headline lines={["Mevcut araçlara", {t: "bir kamera.", c: C.accent}]} size={80} delay={5} />
+      <Eyebrow>HAVADAN ŞEHİR TARAMASI</Eyebrow>
+      <Headline lines={["Tekrarlanabilir", {t: "drone uçuşu.", c: C.accent}]} size={80} delay={5} />
 
       <Panel delay={18} style={{left: G.margin, top: 570, width: 904, height: 364}}>
         <div
@@ -43,7 +43,7 @@ export const S03Sensor: React.FC = () => {
         </div>
       </Panel>
 
-      <Annotation color={C.accent} delay={48} box={{x: 296, y: 1020, w: 516, h: 276}} label="MOBİL SENSÖR" score="AKTİF" />
+      <Annotation color={C.accent} delay={48} box={{x: 296, y: 1020, w: 516, h: 276}} label="DRONE TARAMASI" score="AKTİF" />
 
       <div
         style={{
@@ -77,7 +77,7 @@ export const S03Sensor: React.FC = () => {
         })}
       </div>
 
-      <FooterNote text="YENİ DEVRİYE EKİBİ YOK · YENİ GÜZERGÂH YOK" delay={104} />
+      <FooterNote text="AYNI ROTA · AYNI ÇEKİM STANDARDI · KARŞILAŞTIRILABİLİR SONUÇ" delay={104} />
     </Stage>
   );
 };

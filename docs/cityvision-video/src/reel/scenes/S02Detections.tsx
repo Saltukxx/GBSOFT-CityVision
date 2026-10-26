@@ -4,8 +4,8 @@ import {Annotation, type Box} from "../graphics";
 import {C, FONT, G, clamp, ease, inAt, monoLabel} from "../theme";
 
 /**
- * Anlatım: "…yoldaki çukurları, taşan çöp konteynerlerini ve trafiği
- * aksatan araçları tespit ediyor." Üç sınıf, üç tam kadraj tespit.
+ * Anlatım: "…yol hasarlarını, taşan konteynerleri ve kaçak döküm alanlarını
+ * tespit ediyor." Üç sınıf, üç tam kadraj tespit.
  */
 
 const SLOT = 68;
@@ -46,11 +46,11 @@ const ITEMS: Item[] = [
   {
     src: "gorseller/04-yol-isgali-ve-trafik.png",
     pos: "50% 56%",
-    title: "YOL İŞGALİ",
+    title: "KAÇAK DÖKÜM",
     score: "%86",
     color: C.accent,
-    label: "İKİNCİ SIRA PARK",
-    meta: "OCC-03 · 3 ARAÇ · ŞERİT DARALMASI",
+    label: "MOLOZ ALANI",
+    meta: "WST-08 · ALAN 6.4 m² · İNCELEME GEREKLİ",
     box: {x: 392, y: 944, w: 620, h: 396},
     extra: [
       {x: 104, y: 862, w: 316, h: 296},

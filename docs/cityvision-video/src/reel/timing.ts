@@ -11,17 +11,17 @@ export const TRANSITION = 12;
 
 /** Her cümlenin başlangıç karesi (mutlak). */
 export const VO = {
-  s01: 0, // Şehirde her gün sayısız belediye aracı aynı sokaklardan geçiyor.
-  s02: 112, // Bu araçlar artık karşılarına çıkan sorunları da görebiliyor.
-  s03: 222, // City Vision yoldaki çukurları, taşan konteynerleri ve trafiği aksatan araçları tespit ediyor.
-  s04: 413, // Belediyenin mevcut araçlarına yerleştirilen kameralar yolculuk sırasında çevreyi izliyor.
-  s05: 566, // Toplanan görüntüler araç içerisinde analiz ediliyor.
+  s01: 0, // Drone aynı şehir koridorunu planlı uçuşlarla tekrar tarıyor.
+  s02: 112, // Her uçuş görünür belediye sorunlarını konumu ve kanıtıyla kayda dönüştürüyor.
+  s03: 222, // City Vision yol hasarı, taşan konteyner ve kaçak döküm alanlarını tespit ediyor.
+  s04: 413, // Sabit rota ve çekim standardı sonuçları karşılaştırılabilir kılıyor.
+  s05: 566, // Uçuş görüntüsü merkezi yapay zekâ sisteminde analiz ediliyor.
   s06: 670, // Tespit edilen her sorun konumu ve görüntüsüyle birlikte sisteme kaydediliyor.
-  s07: 809, // Aynı sorun farklı araçlar tarafından yeniden görüldüğünde kayıtlar tek olay altında birleştiriliyor.
+  s07: 809, // Aynı sorun tekrarlı uçuşlarda yeniden görüldüğünde kayıtlar tek olay altında birleştiriliyor.
   s08: 998, // Bu sayede aynı sorun için birden fazla iş emri oluşturulmuyor.
   s09: 1120, // Belediye ekipleri doğrudan doğru noktaya yönlendiriliyor.
   s10: 1232, // Bunun için yeni bir ekip kurulmasına gerek kalmıyor.
-  s11: 1316, // Mevcut araçlar görevlerini sürdürürken şehir de takip ediliyor.
+  s11: 1316, // Planlı drone uçuşları sürerken izinli koridor düzenli takip ediliyor.
   s12: 1434, // Sorunlar büyümeden tespit ediliyor ve ekipler daha hızlı harekete geçiyor.
   s13: 1567, // GBSoft City Vision şehir yönetimini daha hızlı, daha düzenli ve daha verimli hâle getiriyor.
   end: 1760,

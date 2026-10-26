@@ -1,0 +1,1728 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GBSoft - Smart City Technologies</title>
+<style>
+  :root{
+    --paper:#FFFFFF;
+    --paper2:#F5F7F4;
+    --paper3:#EDF1EC;
+    --ink:#0F2019;
+    --ink2:#33463E;
+    --mut:#6C7C74;
+    --mut2:#93A19A;
+    --line:#DCE3DD;
+    --line2:#C6D1C8;
+    --green:#12603F;
+    --green-d:#0A3B27;
+    --green-t:#E8F1EB;
+    --turq:#0E9C9C;
+    --turq-t:#E1F2F1;
+    --sand:#B8862B;
+    --sand-t:#F7EFDD;
+    --brick:#A8442F;
+    --brick-t:#F7E9E5;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{
+    background:#C9D2CB;
+    color:var(--ink);
+    font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    counter-reset:slide;
+  }
+  @page{ size:13.333in 7.5in; margin:0 }
+
+  .slide{
+    position:relative;width:1280px;height:720px;overflow:hidden;
+    background:var(--paper);
+    page-break-after:always;break-after:page;
+    counter-increment:slide;
+  }
+  .slide:last-child{page-break-after:auto}
+  .pad{position:absolute;inset:0;padding:58px 72px 0}
+
+  /* ---- typography ---- */
+  .serif{font-family:Georgia,"Iowan Old Style","Times New Roman",serif}
+  h1.t{
+    font-family:Georgia,"Iowan Old Style","Times New Roman",serif;
+    font-size:40px;line-height:1.16;font-weight:700;letter-spacing:-.012em;color:var(--ink);
+  }
+  h1.t em{font-style:normal;color:var(--green)}
+  p.lead{font-size:15.5px;line-height:1.62;color:var(--ink2);max-width:790px;margin-top:14px}
+
+  .eyebrow{
+    display:flex;align-items:center;gap:12px;
+    font-size:10.5px;letter-spacing:.20em;text-transform:uppercase;color:var(--green);
+    font-weight:700;margin-bottom:16px;
+  }
+  .eyebrow span.n{
+    font-variant-numeric:tabular-nums;color:var(--mut2);font-weight:600;
+  }
+  .eyebrow i{display:block;width:26px;height:1.5px;background:var(--green);font-style:normal}
+
+  .foot{
+    position:absolute;left:72px;right:72px;bottom:24px;
+    padding-top:11px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;color:var(--mut2);
+  }
+  .foot .num{font-variant-numeric:tabular-nums;color:var(--mut)}
+  .foot .num::after{content:counter(slide,decimal-leading-zero)}
+
+  /* ---- components ---- */
+  .grid{display:grid}
+  .box{border:1px solid var(--line);background:var(--paper);padding:18px 20px}
+  .box.tint{background:var(--paper2)}
+  .box h3{font-size:15px;font-weight:650;letter-spacing:-.005em;margin-bottom:6px}
+  .box p{font-size:12.5px;line-height:1.55;color:var(--mut)}
+  .rule{height:1px;background:var(--line)}
+  .cap{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut2);font-weight:700}
+  .note{font-size:10.5px;line-height:1.5;color:var(--mut2)}
+  .kpi{font-family:Georgia,serif;font-size:34px;font-weight:700;letter-spacing:-.02em;color:var(--green)}
+  .kpi.sm{font-size:26px}
+  .chip{
+    display:inline-block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+    padding:4px 9px;border:1px solid var(--line2);color:var(--mut);
+  }
+  .chip.g{border-color:var(--green);color:var(--green);background:var(--green-t)}
+  .chip.t{border-color:var(--turq);color:var(--turq);background:var(--turq-t)}
+
+  /* ---- dividers / cover ---- */
+  .dark{background:var(--green-d);color:#EAF1EC}
+  .dark .foot{border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.5)}
+  .dark .foot .num{color:rgba(255,255,255,.75)}
+  .dark h1.t{color:#fff}
+  .dark h1.t em{color:#67D3C4}
+  .dark .eyebrow{color:#67D3C4}
+  .dark .eyebrow i{background:#67D3C4}
+  .dark p.lead{color:rgba(233,242,236,.78)}
+
+  .bleed{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .scrim{position:absolute;inset:0}
+  .scrim.cover{background:linear-gradient(100deg,#08331F 0%,rgba(8,51,31,.97) 40%,rgba(8,51,31,.72) 64%,rgba(8,51,31,.42) 100%)}
+  .scrim.div{background:linear-gradient(90deg,#08331F 0%,rgba(8,51,31,.94) 46%,rgba(8,51,31,.55) 78%,rgba(8,51,31,.40) 100%)}
+  .photo{display:block;width:100%;object-fit:cover;filter:saturate(.92)}
+  .credit{position:absolute;right:72px;bottom:44px;font-size:8.5px;letter-spacing:.06em;color:rgba(255,255,255,.5)}
+  .credit.dk{color:var(--mut2)}
+  .capt{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut2);margin-top:7px}
+  .mark{display:flex;align-items:center;gap:10px}
+  .mark .wm{font-size:13px;letter-spacing:.26em;font-weight:700}
+  .source-line{font-size:8.5px;line-height:1.35;color:var(--mut2);margin-top:10px}
+  .data-card{height:176px;border:1px solid var(--line);background:var(--paper2);overflow:hidden}
+  .data-card .visual{height:104px;position:relative;overflow:hidden}
+  .data-card .visual img{width:100%;height:104px;object-fit:cover}
+  .data-card .copy{padding:10px 13px}
+  .data-card .copy h3{font-size:14px;line-height:1.15}
+  .data-card .copy p{font-size:10.8px;line-height:1.35;color:var(--mut);margin-top:4px}
+</style>
+<style>
+    .img-en-label{position:absolute;z-index:4;padding:2px 5px;border-radius:3px;background:rgba(6,24,23,.94);color:#fff;font-size:6.5px;font-weight:800;line-height:1.15;letter-spacing:.035em;white-space:nowrap;border:1px solid rgba(32,211,191,.9);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+    .img-en-label.amber{border-color:rgba(255,177,45,.95);background:rgba(45,28,5,.94)}
+  </style></head>
+<body>
+
+<!-- ═══════════ 01 · KAPAK ═══════════ -->
+<section class="slide dark">
+  <img class="bleed" src="img/cityvision-kapak-akilli-sehir-v1.png" alt="Matrice 4TD and rooftop DJI Dock 3 overlooking Erzurum" style="object-position:50% 50%">
+  <div class="scrim" style="background:linear-gradient(90deg,#062F1F 0%,rgba(6,47,31,.98) 38%,rgba(6,47,31,.75) 57%,rgba(6,47,31,.16) 100%),linear-gradient(0deg,rgba(4,30,20,.48),transparent 44%)"></div>
+  <div class="pad">
+    <div class="mark" style="color:#fff">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="#67D3C4" stroke-width="1.6">
+        <rect x="1" y="1" width="30" height="30"/><circle cx="16" cy="16" r="7"/><circle cx="16" cy="16" r="2" fill="#67D3C4" stroke="none"/>
+      </svg>
+      <span class="wm">GBSOFT</span>
+    </div>
+
+    <div style="position:absolute;left:72px;top:214px;width:600px">
+      <div class="eyebrow" style="margin-bottom:22px">Company and Product Presentation · 2026</div>
+      <h1 class="t" style="font-size:52px;line-height:1.1;color:#fff">
+        Software that runs the city,<br><em>AI that sees it.</em> 
+      </h1>
+      <p class="lead" style="max-width:520px;margin-top:22px;font-size:16px">
+        GBSoft delivers end-to-end digital transformation for local governments through its municipal operations platform and City Vision field intelligence.
+      </p>
+      <div style="display:flex;gap:44px;margin-top:44px">
+        <div>
+          <div class="serif" style="font-size:30px;font-weight:700;color:#fff">2</div>
+          <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(233,242,236,.6);margin-top:5px">Live municipalities</div>
+        </div>
+        <div>
+          <div class="serif" style="font-size:30px;font-weight:700;color:#fff">6</div>
+          <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(233,242,236,.6);margin-top:5px">AI modules</div>
+        </div>
+        <div>
+          <div class="serif" style="font-size:30px;font-weight:700;color:#fff">Erzurum</div>
+          <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(233,242,236,.6);margin-top:5px">Ata-Onenokent</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>GBSoft · Smart City Technologies</span><span class="num"></span></div>
+  <!-- [Sources] DJI official product references: https://enterprise.dji.com/dock-3 and https://www.dji.com/media-center/announcements/dji-release-dock-3 ; OpenAI ImageGen: cityvision-kapak-akilli-sehir-v1.png -->
+</section>
+
+<!-- ═══════════ 02 · GBSOFT KİMDİR ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Company <span class="n">/ 01</span></div>
+    <h1 class="t">A software R&D company based at <em>Erzurum Ata-Onenokent.</em></h1>
+    <p class="lead">
+      We focus on digital transformation in the public sector. We develop local software that brings daily municipal operations into one platform and embeds AI directly into the work.
+    </p>
+
+    <div class="grid" style="grid-template-columns:1.32fr 1fr;gap:34px;margin-top:32px">
+      <div>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line)">
+          <div style="padding:20px 22px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+            <div class="cap">Focus</div>
+            <div style="font-size:16px;font-weight:650;margin-top:8px">Local governments</div>
+            <p style="font-size:12.5px;color:var(--mut);line-height:1.5;margin-top:5px">End-to-end operations software for municipalities and public institutions.</p>
+          </div>
+          <div style="padding:20px 22px;border-bottom:1px solid var(--line)">
+            <div class="cap">Approach</div>
+            <div style="font-size:16px;font-weight:650;margin-top:8px">Embedded AI</div>
+            <p style="font-size:12.5px;color:var(--mut);line-height:1.5;margin-top:5px">Classification, planning and optimization run inside the workflow.</p>
+          </div>
+          <div style="padding:20px 22px;border-right:1px solid var(--line)">
+            <div class="cap">Hosting</div>
+            <div style="font-size:16px;font-weight:650;margin-top:8px">Cloud or on-premise</div>
+            <p style="font-size:12.5px;color:var(--mut);line-height:1.5;margin-top:5px">On-premise deployment is available according to the institution's data policy.</p>
+          </div>
+          <div style="padding:20px 22px">
+            <div class="cap">Identity</div>
+            <div style="font-size:16px;font-weight:650;margin-top:8px">Locally developed software</div>
+            <p style="font-size:12.5px;color:var(--mut);line-height:1.5;margin-top:5px">Development, data and support in Türkiye, with an architecture that avoids vendor dependency.</p>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <span class="chip g">Public-sector digital transformation</span>
+          <span class="chip">Ar-Ge</span>
+          <span class="chip t">Smart city</span>
+          <span class="chip">Ata-Onenokent</span>
+        </div>
+      </div>
+
+      <div>
+        <svg viewBox="0 0 400 300" width="100%" height="300" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0.5" y="0.5" width="399" height="299" fill="#F5F7F4" stroke="#DCE3DD"/>
+          <!-- topographic-ish contour of a city block plan -->
+          <g stroke="#C6D1C8" stroke-width="1" fill="none">
+            <path d="M0 90 H400 M0 150 H400 M0 214 H400 M96 0 V300 M196 0 V300 M298 0 V300"/>
+          </g>
+          <g fill="#E8F1EB" stroke="#C6D1C8">
+            <rect x="18" y="20" width="64" height="56"/><rect x="112" y="20" width="70" height="56"/>
+            <rect x="212" y="20" width="70" height="56"/><rect x="312" y="20" width="70" height="56"/>
+            <rect x="18" y="106" width="64" height="30"/><rect x="112" y="106" width="70" height="30"/>
+            <rect x="212" y="106" width="70" height="30"/><rect x="312" y="106" width="70" height="30"/>
+            <rect x="18" y="166" width="64" height="34"/><rect x="212" y="166" width="70" height="34"/>
+            <rect x="18" y="230" width="64" height="46"/><rect x="112" y="230" width="70" height="46"/>
+            <rect x="312" y="230" width="70" height="46"/>
+          </g>
+          <path d="M0 150 H400" stroke="#0E9C9C" stroke-width="2"/>
+          <path d="M196 0 V300" stroke="#0E9C9C" stroke-width="2" opacity=".55"/>
+          <g>
+            <circle cx="196" cy="150" r="26" fill="#12603F"/>
+            <circle cx="196" cy="150" r="10" fill="none" stroke="#fff" stroke-width="1.6"/>
+            <circle cx="196" cy="150" r="3" fill="#fff"/>
+          </g>
+          <g font-family="-apple-system,Arial" font-size="9.5" fill="#6C7C74" letter-spacing="1.2">
+            <text x="130" y="196" font-weight="700" fill="#12603F">ATA-TEKNOKENT</text>
+            <text x="164" y="212">ERZURUM</text>
+          </g>
+        </svg>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
+          <div>
+            <div class="cap">Email</div>
+            <div style="font-size:13px;margin-top:5px">info@gbsoftt.com</div>
+          </div>
+          <div>
+            <div class="cap">Phone</div>
+            <div style="font-size:13px;margin-top:5px">0 536 840 92 36</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Company profile</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 03 · AKILLI ŞEHİR BAKIŞI ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Our Smart City Approach <span class="n">/ 02</span></div>
+    <h1 class="t">A smart city is not a device; <em>it is a closed loop.</em></h1>
+    <p class="lead">
+      Hearing the city's signals is not enough. The system must understand them, route them to the right team, measure the outcome and carry what it learns into the next day. GBSoft builds all five links of this loop on one platform.
+    </p>
+
+    <svg viewBox="0 0 1136 356" width="1136" height="356" style="margin-top:26px" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Arial">
+      <!-- rail -->
+      <line x1="70" y1="112" x2="1066" y2="112" stroke="#DCE3DD" stroke-width="1.5"/>
+
+      <g>
+        <!-- 1 LISTEN -->
+        <g>
+          <circle cx="70" cy="112" r="30" fill="#FFFFFF" stroke="#12603F" stroke-width="1.6"/>
+          <g transform="translate(56,98)" stroke="#12603F" stroke-width="1.5" fill="none">
+            <path d="M4 18 a10 10 0 0 1 20 0"/><path d="M0 18 a14 14 0 0 1 28 0"/><circle cx="14" cy="20" r="2.2" fill="#12603F"/>
+          </g>
+          <text x="70" y="176" font-size="10.5" letter-spacing="1.8" font-weight="700" fill="#12603F" text-anchor="middle">LISTEN</text>
+          <text x="70" y="200" font-size="14" font-weight="650" fill="#0F2019" text-anchor="middle">Citizens</text>
+          <text x="70" y="220" font-size="12" fill="#6C7C74" text-anchor="middle">WhatsApp, call center,</text>
+          <text x="70" y="238" font-size="12" fill="#6C7C74" text-anchor="middle">web and in-person requests</text>
+        </g>
+
+        <!-- 2 SEE -->
+        <g>
+          <circle cx="319" cy="112" r="30" fill="#E1F2F1" stroke="#0E9C9C" stroke-width="1.6"/>
+          <g transform="translate(305,100)" stroke="#0E9C9C" stroke-width="1.5" fill="none">
+            <rect x="0" y="4" width="28" height="19" rx="2"/><circle cx="14" cy="13.5" r="6"/><path d="M9 4 l3-4h4l3 4"/>
+          </g>
+          <text x="319" y="176" font-size="10.5" letter-spacing="1.8" font-weight="700" fill="#0E9C9C" text-anchor="middle">SEE</text>
+          <text x="319" y="200" font-size="14" font-weight="650" fill="#0F2019" text-anchor="middle">City Vision</text>
+          <text x="319" y="220" font-size="12" fill="#6C7C74" text-anchor="middle">Autonomous aerial missions scan</text>
+          <text x="319" y="238" font-size="12" fill="#6C7C74" text-anchor="middle">the city on schedule</text>
+          <text x="319" y="264" font-size="10" letter-spacing="1.4" font-weight="700" fill="#0E9C9C" text-anchor="middle">NEW</text>
+        </g>
+
+        <!-- 3 UNDERSTAND -->
+        <g>
+          <circle cx="568" cy="112" r="30" fill="#FFFFFF" stroke="#12603F" stroke-width="1.6"/>
+          <g transform="translate(554,98)" stroke="#12603F" stroke-width="1.5" fill="none">
+            <rect x="3" y="4" width="22" height="22" rx="4"/><circle cx="10" cy="13" r="1.8" fill="#12603F"/><circle cx="18" cy="13" r="1.8" fill="#12603F"/><path d="M9 20 h10"/><path d="M14 4 V0"/>
+          </g>
+          <text x="568" y="176" font-size="10.5" letter-spacing="1.8" font-weight="700" fill="#12603F" text-anchor="middle">UNDERSTAND</text>
+          <text x="568" y="200" font-size="14" font-weight="650" fill="#0F2019" text-anchor="middle">AI layer</text>
+          <text x="568" y="220" font-size="12" fill="#6C7C74" text-anchor="middle">Classification, prioritization,</text>
+          <text x="568" y="238" font-size="12" fill="#6C7C74" text-anchor="middle">shift and route optimization</text>
+        </g>
+
+        <!-- 4 MANAGE -->
+        <g>
+          <circle cx="817" cy="112" r="30" fill="#FFFFFF" stroke="#12603F" stroke-width="1.6"/>
+          <g transform="translate(803,98)" stroke="#12603F" stroke-width="1.5" fill="none">
+            <rect x="2" y="3" width="24" height="24"/><path d="M8 11 h12 M8 17 h12 M8 23 h7"/>
+          </g>
+          <text x="817" y="176" font-size="10.5" letter-spacing="1.8" font-weight="700" fill="#12603F" text-anchor="middle">MANAGE</text>
+          <text x="817" y="200" font-size="14" font-weight="650" fill="#0F2019" text-anchor="middle">Field teams and departments</text>
+          <text x="817" y="220" font-size="12" fill="#6C7C74" text-anchor="middle">Tasks, teams, vehicles, inventory,</text>
+          <text x="817" y="238" font-size="12" fill="#6C7C74" text-anchor="middle">documents and work orders</text>
+        </g>
+
+        <!-- 5 MEASURE -->
+        <g>
+          <circle cx="1066" cy="112" r="30" fill="#FFFFFF" stroke="#12603F" stroke-width="1.6"/>
+          <g transform="translate(1052,99)" stroke="#12603F" stroke-width="1.5" fill="none">
+            <path d="M2 24 V14 M10 24 V6 M18 24 V11 M26 24 V2"/>
+          </g>
+          <text x="1066" y="176" font-size="10.5" letter-spacing="1.8" font-weight="700" fill="#12603F" text-anchor="middle">MEASURE</text>
+          <text x="1066" y="200" font-size="14" font-weight="650" fill="#0F2019" text-anchor="middle">Management dashboard</text>
+          <text x="1066" y="220" font-size="12" fill="#6C7C74" text-anchor="middle">KPIs, carbon, budget and</text>
+          <text x="1066" y="238" font-size="12" fill="#6C7C74" text-anchor="middle">performance reporting</text>
+        </g>
+      </g>
+
+      <!-- feedback loop -->
+      <path d="M1066 288 V330 H70 V306" fill="none" stroke="#0E9C9C" stroke-width="1.3" stroke-dasharray="5 6"/>
+      <path d="M64 310 l6 -12 l6 12 z" fill="#0E9C9C"/>
+      <rect x="392" y="320" width="352" height="18" fill="#FFFFFF"/>
+      <text x="568" y="334" font-size="11.5" fill="#0E9C9C" text-anchor="middle" font-weight="600">Learning loop - every outcome improves the next decision</text>
+    </svg>
+  </div>
+  <div class="foot"><span>Smart city framework</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 04 · BUGÜN CANLI OLAN ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Live Today <span class="n">/ 03</span></div>
+    <h1 class="t">Municipal Operations Platform - <em>live in a real municipality.</em></h1>
+    <p class="lead">
+      Oltu Municipality runs its daily operations on GBSoft. From citizen requests to field teams, the entire workflow is visible, traceable and measurable in one system.
+    </p>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:0;margin-top:30px;border:1px solid var(--line)">
+      <div style="border-right:1px solid var(--line)">
+       <div style="padding:24px 28px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div class="cap" style="color:var(--green)">Reference · Operational transformation</div>
+            <div class="serif" style="font-size:26px;font-weight:700;margin-top:10px">Oltu Municipality</div>
+          </div>
+          <span class="chip g">Live system</span>
+        </div>
+        <p style="font-size:13px;line-height:1.6;color:var(--ink2);margin-top:14px">
+          A digital municipal management system for the Oltu district. Citizen services, shifts, task assignment, fleet tracking and analytics are unified on one platform.
+        </p>
+        <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px">
+          <div>
+            <div class="kpi sm">0.8 sec</div>
+            <div class="note" style="margin-top:4px">Request classification time</div>
+          </div>
+          <div>
+            <div class="kpi sm">28 min</div>
+            <div class="note" style="margin-top:4px">Average first response</div>
+          </div>
+          <div>
+            <div class="kpi sm">−%37</div>
+            <div class="note" style="margin-top:4px">Fuel on optimized route</div>
+          </div>
+        </div>
+       </div>
+      </div>
+
+      <div>
+       <div style="padding:24px 28px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div class="cap" style="color:var(--turq)">Reference · Operational transformation</div>
+            <div class="serif" style="font-size:26px;font-weight:700;margin-top:10px">Kars Municipality</div>
+          </div>
+          <span class="chip t">Rollout</span>
+        </div>
+        <p style="font-size:13px;line-height:1.6;color:var(--ink2);margin-top:14px">
+          The same platform is live in a second municipality. Citizen services, task assignment and field coordination were configured for the institution's own departmental structure.
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:22px">
+          <span class="chip">Citizen Service Desk</span>
+          <span class="chip">Task assignment</span>
+          <span class="chip">Shift planning</span>
+          <span class="chip">Analytics</span>
+        </div>
+       </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:0;margin-top:14px;border:1px solid var(--line);background:var(--paper2)">
+      <div style="flex:1;padding:14px 24px;border-right:1px solid var(--line)">
+        <div class="cap">Platform logic</div>
+        <div style="font-size:13.5px;margin-top:7px;line-height:1.5">The request enters through one door, AI classifies it, the right department resolves it and the dashboard measures it.</div>
+      </div>
+      <div style="flex:1;padding:14px 24px;border-right:1px solid var(--line)">
+        <div class="cap">Deployment</div>
+        <div style="font-size:13.5px;margin-top:7px;line-height:1.5">Cloud or the municipality's own server, configured for the existing departmental structure.</div>
+      </div>
+      <div style="flex:1;padding:14px 24px">
+        <div class="cap">Rollout</div>
+        <div style="font-size:13.5px;margin-top:7px;line-height:1.5">A ready-to-deploy package for new municipalities, including staff training.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Reference operation</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 05 · ALTI AI MODÜLÜ ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Municipal AI Modules <span class="n">/ 04</span></div>
+    <h1 class="t">Six AI modules developed <em>for municipalities.</em></h1>
+    <p class="lead">
+      Each module can be deployed independently. Together, they optimize requests, staff, vehicles and emissions through one engine.
+    </p>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:0;margin-top:28px;border-top:1px solid var(--line);border-left:1px solid var(--line)">
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <div style="display:flex;align-items:center;gap:11px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg>
+          <span class="cap" style="color:var(--green)">Module 01</span>
+        </div>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">AI-Powered Citizen Service Desk</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:7px">
+          Automatically categorizes citizen requests, determines urgency and routes each case to the right department.
+        </p>
+        <div style="margin-top:14px;font-size:12px;color:var(--green);font-weight:600">Classification in 0.8 seconds</div>
+      </div>
+
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <div style="display:flex;align-items:center;gap:11px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><path d="M4 4h16v12H7l-3 3z"/><path d="M9 10h.01M13 10h.01M17 10h.01"/></svg>
+          <span class="cap" style="color:var(--green)">Module 02</span>
+        </div>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">Smart Message Routing</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:7px">
+          24/7 request intake through WhatsApp integration; each message becomes a queued, trackable record.
+        </p>
+        <div style="margin-top:14px;font-size:12px;color:var(--green);font-weight:600">Always-on channel</div>
+      </div>
+
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <div style="display:flex;align-items:center;gap:11px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 18h7"/></svg>
+          <span class="cap" style="color:var(--green)">Module 03</span>
+        </div>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">AI Shift Planning</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:7px">
+          Recommends optimal shifts based on workload, balances staffing and reduces overtime cost.
+        </p>
+        <div style="margin-top:14px;font-size:12px;color:var(--green);font-weight:600">Balanced staff allocation</div>
+      </div>
+
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <div style="display:flex;align-items:center;gap:11px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><path d="M4 18c4 0 3-11 8-11s5 8 8 8"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="15" r="2"/></svg>
+          <span class="cap" style="color:var(--green)">Module 04</span>
+        </div>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">AI Route Optimization</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:7px">
+          Calculates the most efficient fleet routes, balances capacity and reduces fuel use and travel time.
+        </p>
+        <div style="margin-top:14px;font-size:12px;color:var(--green);font-weight:600">-37% fuel (sample route)</div>
+      </div>
+
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <div style="display:flex;align-items:center;gap:11px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><path d="M20 4c0 8-5 13-13 13H4c0-8 5-13 13-13z"/><path d="M4 20c2-5 5-8 9-10"/></svg>
+          <span class="cap" style="color:var(--green)">Module 05</span>
+        </div>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">Carbon Emissions Tracking</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:7px">
+          Measures the fleet's carbon footprint and produces AI-assisted reduction plans and reports.
+        </p>
+        <div style="margin-top:14px;font-size:12px;color:var(--green);font-weight:600">Aligned with the EU Green Deal</div>
+      </div>
+
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <div style="display:flex;align-items:center;gap:11px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><path d="M3 20V10M9 20V4M15 20v-8M21 20V7"/></svg>
+          <span class="cap" style="color:var(--green)">Module 06</span>
+        </div>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">Real-Time Analytics</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:7px">
+          Performance forecasts and trend analysis in a single decision dashboard for executive management.
+        </p>
+        <div style="margin-top:14px;font-size:12px;color:var(--green);font-weight:600">Executive analytics dashboard</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:16px">The modules share one data model: information produced by one module becomes input for another.</div>
+  </div>
+  <div class="foot"><span>AI modules</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 06 · AI BEYAZ MASA ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Module 01 · AI Citizen Service Desk <span class="n">/ 05</span></div>
+    <h1 class="t">AI that reads, classifies and <em>routes each request to the right desk.</em> </h1>
+
+    <div class="grid" style="grid-template-columns:1.05fr 1fr;gap:30px;margin-top:26px">
+      <!-- classification demo -->
+      <div style="border:1px solid var(--line)">
+        <div style="padding:14px 20px;border-bottom:1px solid var(--line);background:var(--paper2);display:flex;justify-content:space-between;align-items:center">
+          <span class="cap">Citizen Service Desk · classification</span>
+          <span class="cap" style="color:var(--turq)">0.8 sec</span>
+        </div>
+        <div style="padding:20px">
+          <div style="border:1px solid var(--line);padding:14px 16px;background:#fff">
+            <div class="cap" style="color:var(--mut2)">Incoming request · WhatsApp 09:41</div>
+            <p style="font-size:13.5px;line-height:1.55;margin-top:8px;color:var(--ink)">
+              “A water pipe burst in Cumhuriyet Neighborhood and the road is flooding. Urgent help needed!”
+            </p>
+          </div>
+
+          <svg viewBox="0 0 480 34" width="100%" height="34" style="margin:6px 0" xmlns="http://www.w3.org/2000/svg">
+            <line x1="240" y1="2" x2="240" y2="24" stroke="#C6D1C8" stroke-width="1.2" stroke-dasharray="3 4"/>
+            <path d="M234 22 l6 10 l6 -10 z" fill="#C6D1C8"/>
+          </svg>
+
+          <div class="grid" style="grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line)">
+            <div style="padding:13px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+              <div class="cap">Category</div>
+              <div style="font-size:14px;font-weight:650;margin-top:6px">Water and Sewerage</div>
+            </div>
+            <div style="padding:13px 16px;border-bottom:1px solid var(--line)">
+              <div class="cap">Urgency</div>
+              <div style="font-size:14px;font-weight:650;margin-top:6px;color:var(--brick)">High</div>
+            </div>
+            <div style="padding:13px 16px;border-right:1px solid var(--line)">
+              <div class="cap">Assigned department</div>
+              <div style="font-size:14px;font-weight:650;margin-top:6px">Public Works Department</div>
+            </div>
+            <div style="padding:13px 16px">
+              <div class="cap">Estimated first response</div>
+              <div style="font-size:14px;font-weight:650;margin-top:6px">~45 minutes</div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:7px">
+            <span class="chip">Sanitation Services</span>
+            <span class="chip">Road Maintenance and Repair</span>
+            <span class="chip">Street Lighting</span>
+            <span class="chip">Veterinary Services</span>
+            <span class="chip">Municipal Police Services</span>
+            <span class="chip">General Request</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- before / after -->
+      <div>
+        <div style="border:1px solid var(--line);padding:18px 20px">
+          <div class="cap" style="color:var(--brick)">Traditional process</div>
+          <ul style="list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:9px">
+            <li style="font-size:13px;color:var(--ink2);display:flex;gap:10px"><span style="color:var(--brick)">-</span>Routing to the wrong department causes delays</li>
+            <li style="font-size:13px;color:var(--ink2);display:flex;gap:10px"><span style="color:var(--brick)">-</span>Prioritization becomes inconsistent</li>
+            <li style="font-size:13px;color:var(--ink2);display:flex;gap:10px"><span style="color:var(--brick)">-</span>Requests accumulate during peak periods</li>
+          </ul>
+        </div>
+        <div style="border:1px solid var(--green);border-top:none;padding:18px 20px;background:var(--green-t)">
+          <div class="cap" style="color:var(--green)">With GBSoft</div>
+          <ul style="list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:9px">
+            <li style="font-size:13px;color:var(--ink);display:flex;gap:10px"><span style="color:var(--green)">✓</span>Requests are categorized automatically</li>
+            <li style="font-size:13px;color:var(--ink);display:flex;gap:10px"><span style="color:var(--green)">✓</span>Immediate routing to the right department</li>
+            <li style="font-size:13px;color:var(--ink);display:flex;gap:10px"><span style="color:var(--green)">✓</span>Smart prioritization by urgency</li>
+            <li style="font-size:13px;color:var(--ink);display:flex;gap:10px"><span style="color:var(--green)">✓</span>Every record is preserved in the audit trail</li>
+          </ul>
+        </div>
+        <div style="display:flex;gap:0;margin-top:18px;border:1px solid var(--line)">
+          <div style="flex:1;padding:14px 18px;border-right:1px solid var(--line)">
+            <div class="kpi sm">28 min</div><div class="note" style="margin-top:3px">Average first response</div>
+          </div>
+          <div style="flex:1;padding:14px 18px;border-right:1px solid var(--line)">
+            <div class="kpi sm">42 min</div><div class="note" style="margin-top:3px">Sample request resolution time</div>
+          </div>
+          <div style="flex:1;padding:14px 18px">
+            <div class="kpi sm">7/24</div><div class="note" style="margin-top:3px">Continuous request intake</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>AI Citizen Service Desk</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 07 · MESAJ YÖNLENDİRME ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Module 02 · Smart Message Routing <span class="n">/ 06</span></div>
+    <h1 class="t">One address for citizens: <em>the app they already use.</em></h1>
+    <p class="lead">
+      There is no new app to download or portal to join. Citizens write through WhatsApp; the message becomes a numbered municipal record within seconds, with feedback throughout the process.
+    </p>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:22px;margin-top:22px">
+      <div style="border:1px solid var(--line);background:var(--paper2);overflow:hidden">
+        <img src="img/cityvision-whatsapp-vatandas-v1.png" alt="Citizen reporting a road issue with a photo and location through WhatsApp" style="width:100%;height:205px;display:block;object-fit:cover;object-position:50% 50%">
+        <div style="padding:15px 19px 16px">
+          <div class="cap" style="color:var(--turq)">01 · CITIZEN</div>
+          <h3 style="font-size:17px;margin-top:6px">Sends a photo and location through WhatsApp</h3>
+          <p style="font-size:12px;line-height:1.45;color:var(--mut);margin-top:6px">No new app; citizens reach the municipality through a channel they already use.</p>
+        </div>
+      </div>
+      <div style="border:1px solid var(--green);background:var(--green-t);overflow:hidden">
+        <img src="img/cityvision-beyaz-masa-v1.png" alt="Citizen Service Desk operator converting a WhatsApp message into a municipal record" style="width:100%;height:205px;display:block;object-fit:cover;object-position:50% 48%">
+        <div style="padding:15px 19px 16px">
+          <div class="cap" style="color:var(--green)">02 · SERVICE DESK</div>
+          <h3 style="font-size:17px;margin-top:6px">The message becomes a numbered, trackable request</h3>
+          <p style="font-size:12px;line-height:1.45;color:var(--ink2);margin-top:6px">The topic, urgency and responsible department are suggested, with feedback sent throughout the process.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:0;margin-top:16px;border:1px solid var(--line)">
+      <div style="padding:12px 16px;border-right:1px solid var(--line)"><div class="cap" style="color:var(--turq)">01 · RECEIVE</div><div style="font-size:12.5px;font-weight:650;margin-top:5px">WhatsApp message</div></div>
+      <div style="padding:12px 16px;border-right:1px solid var(--line)"><div class="cap" style="color:var(--turq)">02 · UNDERSTAND</div><div style="font-size:12.5px;font-weight:650;margin-top:5px">AI identifies topic and urgency</div></div>
+      <div style="padding:12px 16px;border-right:1px solid var(--line)"><div class="cap" style="color:var(--turq)">03 · RECORD</div><div style="font-size:12.5px;font-weight:650;margin-top:5px">Numbered request</div></div>
+      <div style="padding:12px 16px;background:var(--green-t)"><div class="cap" style="color:var(--green)">04 · NOTIFY</div><div style="font-size:12.5px;font-weight:650;margin-top:5px">Automated feedback</div></div>
+    </div>
+    <!-- [Sources] OpenAI ImageGen: cityvision-whatsapp-vatandas-v1.png, cityvision-beyaz-masa-v1.png -->
+  </div>
+  <div class="foot"><span>Smart message routing</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 08 · VARDİYA PLUNDERSTANDMA ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Module 03 · AI Shift Planning <span class="n">/ 07</span></div>
+    <h1 class="t">A schedule that allocates staff <em>according to workload.</em></h1>
+    <p class="lead">
+      Manual shift planning takes time and creates imbalances. The system recommends schedules based on historical request density, district and team capacity, then adapts to changing workload during the day.
+    </p>
+
+    <div class="grid" style="grid-template-columns:1.45fr 1fr;gap:28px;margin-top:24px">
+      <div style="border:1px solid var(--line)">
+        <div style="padding:13px 20px;border-bottom:1px solid var(--line);background:var(--paper2);display:flex;justify-content:space-between">
+          <span class="cap">Weekly shift allocation</span>
+          <span class="cap" style="color:var(--turq)">AI recommendation applied</span>
+        </div>
+        <div style="padding:18px 20px">
+          <svg viewBox="0 0 620 236" width="100%" height="236" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Arial">
+            <!-- grid -->
+            <g stroke="#EDF1EC" stroke-width="1">
+              <line x1="86" y1="20" x2="620" y2="20"/><line x1="86" y1="62" x2="620" y2="62"/>
+              <line x1="86" y1="104" x2="620" y2="104"/><line x1="86" y1="146" x2="620" y2="146"/>
+              <line x1="86" y1="188" x2="620" y2="188"/>
+            </g>
+            <g font-size="11" fill="#6C7C74">
+              <text x="0" y="24">Sanitation</text><text x="0" y="66">Public Works</text>
+              <text x="0" y="108">Water/Sewerage</text><text x="0" y="150">Municipal Police</text><text x="0" y="192">Veterinary</text>
+            </g>
+            <g font-size="10" fill="#93A19A" text-anchor="middle">
+              <text x="120" y="218">Mon</text><text x="196" y="218">Tue</text><text x="272" y="218">Wed</text>
+              <text x="348" y="218">Thu</text><text x="424" y="218">Fri</text><text x="500" y="218">Sat</text><text x="576" y="218">Sun</text>
+            </g>
+            <!-- load blocks: opacity encodes staffing -->
+            <g>
+              <!-- row1 -->
+              <rect x="92" y="6" width="56" height="26" fill="#12603F" opacity=".85"/><rect x="168" y="6" width="56" height="26" fill="#12603F" opacity=".6"/>
+              <rect x="244" y="6" width="56" height="26" fill="#12603F" opacity=".9"/><rect x="320" y="6" width="56" height="26" fill="#12603F" opacity=".5"/>
+              <rect x="396" y="6" width="56" height="26" fill="#12603F" opacity=".95"/><rect x="472" y="6" width="56" height="26" fill="#12603F" opacity=".35"/>
+              <rect x="548" y="6" width="56" height="26" fill="#12603F" opacity=".2"/>
+              <!-- row2 -->
+              <rect x="92" y="48" width="56" height="26" fill="#12603F" opacity=".5"/><rect x="168" y="48" width="56" height="26" fill="#12603F" opacity=".75"/>
+              <rect x="244" y="48" width="56" height="26" fill="#12603F" opacity=".55"/><rect x="320" y="48" width="56" height="26" fill="#12603F" opacity=".85"/>
+              <rect x="396" y="48" width="56" height="26" fill="#12603F" opacity=".6"/><rect x="472" y="48" width="56" height="26" fill="#12603F" opacity=".3"/>
+              <rect x="548" y="48" width="56" height="26" fill="#12603F" opacity=".18"/>
+              <!-- row3 -->
+              <rect x="92" y="90" width="56" height="26" fill="#0E9C9C" opacity=".55"/><rect x="168" y="90" width="56" height="26" fill="#0E9C9C" opacity=".4"/>
+              <rect x="244" y="90" width="56" height="26" fill="#0E9C9C" opacity=".8"/><rect x="320" y="90" width="56" height="26" fill="#0E9C9C" opacity=".45"/>
+              <rect x="396" y="90" width="56" height="26" fill="#0E9C9C" opacity=".6"/><rect x="472" y="90" width="56" height="26" fill="#0E9C9C" opacity=".35"/>
+              <rect x="548" y="90" width="56" height="26" fill="#0E9C9C" opacity=".25"/>
+              <!-- row4 -->
+              <rect x="92" y="132" width="56" height="26" fill="#12603F" opacity=".45"/><rect x="168" y="132" width="56" height="26" fill="#12603F" opacity=".5"/>
+              <rect x="244" y="132" width="56" height="26" fill="#12603F" opacity=".45"/><rect x="320" y="132" width="56" height="26" fill="#12603F" opacity=".55"/>
+              <rect x="396" y="132" width="56" height="26" fill="#12603F" opacity=".8"/><rect x="472" y="132" width="56" height="26" fill="#12603F" opacity=".7"/>
+              <rect x="548" y="132" width="56" height="26" fill="#12603F" opacity=".4"/>
+              <!-- row5 -->
+              <rect x="92" y="174" width="56" height="26" fill="#12603F" opacity=".3"/><rect x="168" y="174" width="56" height="26" fill="#12603F" opacity=".25"/>
+              <rect x="244" y="174" width="56" height="26" fill="#12603F" opacity=".4"/><rect x="320" y="174" width="56" height="26" fill="#12603F" opacity=".3"/>
+              <rect x="396" y="174" width="56" height="26" fill="#12603F" opacity=".35"/><rect x="472" y="174" width="56" height="26" fill="#12603F" opacity=".2"/>
+              <rect x="548" y="174" width="56" height="26" fill="#12603F" opacity=".15"/>
+            </g>
+            <rect x="394" y="2" width="60" height="200" fill="none" stroke="#0E9C9C" stroke-width="1.4"/>
+            <text x="424" y="234" font-size="10" fill="#0E9C9C" text-anchor="middle" font-weight="700">peak demand</text>
+          </svg>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+            <span class="note">Low demand</span>
+            <svg width="150" height="10"><rect width="150" height="10" fill="#12603F" opacity=".18"/><rect width="112" height="10" fill="#12603F" opacity=".35"/><rect width="74" height="10" fill="#12603F" opacity=".6"/><rect width="36" height="10" fill="#12603F" opacity=".9"/></svg>
+            <span class="note">High demand</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--line)">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+          <div class="cap" style="color:var(--brick)">Problems addressed</div>
+          <div style="font-size:12.5px;color:var(--ink2);line-height:1.6;margin-top:9px">
+            Manual planning takes time · Staffing becomes unbalanced · Unexpected workload changes are harder to absorb · Overtime costs rise
+          </div>
+        </div>
+        <div style="padding:16px 20px;border-bottom:1px solid var(--line);background:var(--green-t)">
+          <div class="cap" style="color:var(--green)">Benefits</div>
+          <div style="font-size:12.5px;color:var(--ink);line-height:1.6;margin-top:9px">
+            Optimal shift recommendations by workload · Balanced staff allocation · Dynamic replanning · Optimized overtime cost
+          </div>
+        </div>
+        <div style="padding:18px 20px;display:flex;gap:24px;border-bottom:1px solid var(--line)">
+          <div>
+            <div class="kpi sm">3</div>
+            <div class="note" style="margin-top:3px">Staff balanced in sample day</div>
+          </div>
+          <div>
+            <div class="kpi sm">Real time</div>
+            <div class="note" style="margin-top:3px">Plan update</div>
+          </div>
+        </div>
+        <div style="padding:14px 20px;font-size:12.5px;line-height:1.55;color:var(--ink2)">
+          Shift planning is read together with request density: the system knows what work appears in each neighborhood and positions the team there in advance.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:0;margin-top:16px;border:1px solid var(--line);background:var(--paper2)">
+      <div style="padding:13px 22px;border-right:1px solid var(--line)">
+        <div class="cap" style="color:var(--green)">Input</div>
+        <div style="font-size:12.5px;line-height:1.55;margin-top:7px;color:var(--ink2)">Historical request density, department capacity, leave and attendance records.</div>
+      </div>
+      <div style="padding:13px 22px;border-right:1px solid var(--line)">
+        <div class="cap" style="color:var(--green)">Output</div>
+        <div style="font-size:12.5px;line-height:1.55;margin-top:7px;color:var(--ink2)">Weekly schedule recommendation; the manager approves or edits it manually.</div>
+      </div>
+      <div style="padding:13px 22px">
+        <div class="cap" style="color:var(--green)">You retain control</div>
+        <div style="font-size:12.5px;line-height:1.55;margin-top:7px;color:var(--ink2)">The system recommends rather than dictates; the department makes the final decision.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>AI shift planning</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 09 · ROTA OPTİMİZASYONU ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Module 04 · AI Route Optimization <span class="n">/ 08</span></div>
+    <h1 class="t">Do the same work <em>with a shorter route.</em> </h1>
+
+    <div style="position:relative;margin-top:24px;height:360px;border:1px solid var(--line);overflow:hidden">
+      <img src="img/cityvision-rota-karsilastirma-v1.png" alt="Conventional and AI-optimized municipal vehicle routes in the same neighborhood" style="width:100%;height:100%;display:block;object-fit:cover">
+      <div style="position:absolute;left:16px;top:15px;background:rgba(255,255,255,.94);border-left:4px solid var(--brick);padding:10px 14px;width:245px">
+        <div class="cap" style="color:var(--brick)">Conventional route</div>
+        <div style="font-size:13px;font-weight:650;margin-top:4px">Overlapping routes and backtracking</div>
+      </div>
+      <div style="position:absolute;left:584px;top:15px;background:rgba(232,241,235,.95);border-left:4px solid var(--green);padding:10px 14px;width:245px">
+        <div class="cap" style="color:var(--green)">AI route</div>
+        <div style="font-size:13px;font-weight:650;margin-top:4px">Same stops, shorter distance</div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:0;margin-top:18px;border:1px solid var(--line)">
+      <div style="padding:14px 20px;border-right:1px solid var(--line)"><div class="kpi sm" style="color:var(--brick)">41 km</div><div class="note" style="margin-top:3px">Manually planned sample route</div></div>
+      <div style="padding:14px 20px;border-right:1px solid var(--line);background:var(--green-t)"><div class="kpi sm">26 km</div><div class="note" style="margin-top:3px">AI-optimized route</div></div>
+      <div style="padding:14px 20px;border-right:1px solid var(--line)"><div class="kpi sm">−%37</div><div class="note" style="margin-top:3px">Sample fuel saving</div></div>
+      <div style="padding:14px 20px"><div class="kpi sm">14 min</div><div class="note" style="margin-top:3px">Estimated arrival for sample call</div></div>
+    </div>
+    <!-- [Sources] OpenAI ImageGen: cityvision-rota-karsilastirma-v1.png -->
+  </div>
+  <div class="foot"><span>AI route optimization</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 10 · KARBON TAKİBİ ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Module 05 · Carbon Emissions Tracking <span class="n">/ 09</span></div>
+    <h1 class="t">Make savings <em>measurable</em> - and reportable.</h1>
+    <p class="lead">
+      Emissions calculated from fleet movements become the municipality's environmental scorecard. You produce the data required in the European Green Deal alignment process without a separate study.
+    </p>
+
+    <div class="grid" style="grid-template-columns:1.3fr 1fr;gap:28px;margin-top:24px">
+      <div style="border:1px solid var(--line);padding:20px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span class="cap">Fleet carbon emissions · monthly trend</span>
+          <span style="font-size:12px;color:var(--green);font-weight:600">This month -12%</span>
+        </div>
+        <svg viewBox="0 0 620 236" width="100%" height="236" style="margin-top:14px" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Arial">
+          <g stroke="#EDF1EC"><line x1="46" y1="30" x2="620" y2="30"/><line x1="46" y1="80" x2="620" y2="80"/><line x1="46" y1="130" x2="620" y2="130"/><line x1="46" y1="180" x2="620" y2="180"/></g>
+          <line x1="46" y1="180" x2="620" y2="180" stroke="#C6D1C8"/>
+          <g font-size="10" fill="#93A19A"><text x="0" y="34">120 t</text><text x="0" y="84">80 t</text><text x="0" y="134">40 t</text><text x="8" y="184">0</text></g>
+          <g fill="#12603F">
+            <rect x="70" y="46" width="42" height="134" opacity=".85"/>
+            <rect x="150" y="54" width="42" height="126" opacity=".85"/>
+            <rect x="230" y="68" width="42" height="112" opacity=".85"/>
+            <rect x="310" y="82" width="42" height="98" opacity=".85"/>
+            <rect x="390" y="96" width="42" height="84" opacity=".85"/>
+            <rect x="470" y="106" width="42" height="74" opacity=".85"/>
+            <rect x="550" y="118" width="42" height="62" fill="#0E9C9C"/>
+          </g>
+          <path d="M91 46 L171 54 L251 68 L331 82 L411 96 L491 106 L571 118" fill="none" stroke="#0F2019" stroke-width="1.4" stroke-dasharray="4 4" opacity=".45"/>
+          <g font-size="10" fill="#6C7C74" text-anchor="middle">
+            <text x="91" y="198">Feb</text><text x="171" y="198">Mar</text><text x="251" y="198">Apr</text><text x="331" y="198">May</text><text x="411" y="198">Jun</text><text x="491" y="198">Jul</text><text x="571" y="198">Aug</text>
+          </g>
+          <text x="571" y="112" font-size="10.5" fill="#0E9C9C" text-anchor="middle" font-weight="700">this month</text>
+          <text x="46" y="226" font-size="11" fill="#6C7C74">Trend after route optimization and shift balancing were introduced.</text>
+        </svg>
+      </div>
+
+      <div>
+        <div style="border:1px solid var(--line);padding:20px 22px">
+          <div class="cap" style="color:var(--turq)">European Green Deal</div>
+          <p style="font-size:12.5px;line-height:1.6;color:var(--ink2);margin-top:10px">
+            The EU aims to be climate-neutral by 2050, with an interim target of reducing emissions by at least 55% by 2030. Municipalities can contribute only by measuring their impact.
+          </p>
+          <div style="display:flex;gap:22px;margin-top:16px">
+            <div><div class="kpi sm" style="color:var(--turq)">2050</div><div class="note" style="margin-top:3px">Climate-neutral target</div></div>
+            <div><div class="kpi sm" style="color:var(--turq)">%55</div><div class="note" style="margin-top:3px">2030 reduction target</div></div>
+          </div>
+        </div>
+        <div style="border:1px solid var(--line);border-top:none;padding:20px 22px;background:var(--paper2)">
+          <div class="cap">Platform contribution</div>
+          <ul style="list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:8px">
+            <li style="font-size:12.5px;display:flex;gap:9px;color:var(--ink2)"><span style="color:var(--green)">›</span>Route planning that saves fuel</li>
+            <li style="font-size:12.5px;display:flex;gap:9px;color:var(--ink2)"><span style="color:var(--green)">›</span>Real-time emissions reports</li>
+            <li style="font-size:12.5px;display:flex;gap:9px;color:var(--ink2)"><span style="color:var(--green)">›</span>Target-based reduction recommendations</li>
+            <li style="font-size:12.5px;display:flex;gap:9px;color:var(--ink2)"><span style="color:var(--green)">›</span>Shift balance that prevents resource waste</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Carbon tracking and green alignment</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 11 · ANALİTİK ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Module 06 · Real-Time Analytics <span class="n">/ 10</span></div>
+    <h1 class="t">A single-screen municipal <em>scorecard for executive management.</em> </h1>
+
+    <div style="border:1px solid var(--line);margin-top:22px">
+      <div style="padding:14px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:var(--paper2)">
+        <span style="font-size:14px;font-weight:650">Executive Analytics Dashboard · August 2026</span>
+        <span class="note">Last updated: today at 17:40</span>
+      </div>
+
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)">
+        <div style="padding:18px 22px;border-right:1px solid var(--line)">
+          <div class="cap">Incoming requests</div><div class="kpi" style="margin-top:8px">3.184</div>
+          <div class="note" style="margin-top:4px">+9% vs. last month</div>
+        </div>
+        <div style="padding:18px 22px;border-right:1px solid var(--line)">
+          <div class="cap">Resolved</div><div class="kpi" style="margin-top:8px">2.867</div>
+          <div class="note" style="margin-top:4px">90% closure rate</div>
+        </div>
+        <div style="padding:18px 22px;border-right:1px solid var(--line)">
+          <div class="cap">Average first response</div><div class="kpi" style="margin-top:8px">28 min</div>
+          <div class="note" style="margin-top:4px">Target: under 30 min</div>
+        </div>
+        <div style="padding:18px 22px">
+          <div class="cap">Fleet carbon</div><div class="kpi" style="margin-top:8px;color:var(--turq)">−%12</div>
+          <div class="note" style="margin-top:4px">This month vs. last month</div>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns:1.5fr 1fr 1fr">
+        <div style="padding:20px 24px;border-right:1px solid var(--line)">
+          <div class="cap">Requests / resolutions - last 7 weeks</div>
+          <svg viewBox="0 0 460 150" width="100%" height="150" style="margin-top:12px" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="126" x2="460" y2="126" stroke="#C6D1C8"/>
+            <g>
+              <rect x="14" y="52" width="20" height="74" fill="#12603F" opacity=".85"/><rect x="38" y="72" width="20" height="54" fill="#0E9C9C"/>
+              <rect x="80" y="44" width="20" height="82" fill="#12603F" opacity=".85"/><rect x="104" y="62" width="20" height="64" fill="#0E9C9C"/>
+              <rect x="146" y="36" width="20" height="90" fill="#12603F" opacity=".85"/><rect x="170" y="54" width="20" height="72" fill="#0E9C9C"/>
+              <rect x="212" y="48" width="20" height="78" fill="#12603F" opacity=".85"/><rect x="236" y="60" width="20" height="66" fill="#0E9C9C"/>
+              <rect x="278" y="30" width="20" height="96" fill="#12603F" opacity=".85"/><rect x="302" y="46" width="20" height="80" fill="#0E9C9C"/>
+              <rect x="344" y="40" width="20" height="86" fill="#12603F" opacity=".85"/><rect x="368" y="52" width="20" height="74" fill="#0E9C9C"/>
+              <rect x="410" y="56" width="20" height="70" fill="#12603F" opacity=".85"/><rect x="434" y="66" width="20" height="60" fill="#0E9C9C"/>
+            </g>
+            <g font-family="-apple-system,Arial" font-size="9.5" fill="#93A19A" text-anchor="middle">
+              <text x="36" y="142">H1</text><text x="102" y="142">H2</text><text x="168" y="142">H3</text><text x="234" y="142">H4</text><text x="300" y="142">H5</text><text x="366" y="142">H6</text><text x="432" y="142">H7</text>
+            </g>
+          </svg>
+          <div style="display:flex;gap:18px;margin-top:8px">
+            <span class="note"><span style="color:var(--green)">■</span> requests</span>
+            <span class="note"><span style="color:var(--turq)">■</span> resolutions</span>
+          </div>
+        </div>
+
+        <div style="padding:20px 24px;border-right:1px solid var(--line)">
+          <div class="cap">Workload by department</div>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Public Works</span><b>1.184</b></div>
+              <div style="height:6px;background:var(--paper3);margin-top:5px"><div style="height:6px;width:92%;background:var(--green)"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Sanitation</span><b>726</b></div>
+              <div style="height:6px;background:var(--paper3);margin-top:5px"><div style="height:6px;width:60%;background:var(--green)"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Water and Sewerage</span><b>512</b></div>
+              <div style="height:6px;background:var(--paper3);margin-top:5px"><div style="height:6px;width:43%;background:var(--green)"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Municipal Police</span><b>341</b></div>
+              <div style="height:6px;background:var(--paper3);margin-top:5px"><div style="height:6px;width:28%;background:var(--turq)"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Veterinary</span><b>104</b></div>
+              <div style="height:6px;background:var(--paper3);margin-top:5px"><div style="height:6px;width:12%;background:var(--turq)"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:20px 24px">
+          <div class="cap">Highlights</div>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:13px">
+            <div style="font-size:12.5px;line-height:1.5;color:var(--ink2);border-left:2px solid var(--green);padding-left:11px">
+              Water failure requests <b>rose 21% vs. last week</b>; Cumhuriyet Neighborhood stands out.
+            </div>
+            <div style="font-size:12.5px;line-height:1.5;color:var(--ink2);border-left:2px solid var(--turq);padding-left:11px">
+              For sanitation teams, <b>Friday demand</b> is recurring; a shift recommendation is ready.
+            </div>
+            <div style="font-size:12.5px;line-height:1.5;color:var(--ink2);border-left:2px solid var(--line2);padding-left:11px">
+              Fleet fuel consumption <b>has fallen for six months</b>; ahead of the annual target.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:14px">Illustrative dashboard; figures are sample operational data.</div>
+  </div>
+  <div class="foot"><span>Real-time analytics</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 12 · BİR TALEBİN YOLCULUĞU ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>End-to-End Flow <span class="n">/ 11</span></div>
+    <h1 class="t">A request journey becomes <em>a learning service loop.</em> </h1>
+
+    <div style="position:relative;width:1136px;height:388px;margin-top:22px">
+      <svg viewBox="0 0 1136 388" width="1136" height="388" style="position:absolute;inset:0" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="journey-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 Z" fill="#0E9C9C"/>
+          </marker>
+        </defs>
+        <path d="M446 74 H680" fill="none" stroke="#0E9C9C" stroke-width="2.5" marker-end="url(#journey-arrow)"/>
+        <path d="M916 156 V218" fill="none" stroke="#0E9C9C" stroke-width="2.5" marker-end="url(#journey-arrow)"/>
+        <path d="M690 314 H456" fill="none" stroke="#0E9C9C" stroke-width="2.5" marker-end="url(#journey-arrow)"/>
+        <path d="M220 228 V166" fill="none" stroke="#0E9C9C" stroke-width="2.5" marker-end="url(#journey-arrow)"/>
+      </svg>
+
+      <div style="position:absolute;left:0;top:0;width:440px;height:150px;display:grid;grid-template-columns:150px 1fr;background:#fff;border:1px solid var(--line);overflow:hidden">
+        <img src="img/cityvision-talep-dongusu-01-v1.png" alt="Citizen reporting road damage by phone" style="width:150px;height:150px;object-fit:cover">
+        <div style="padding:17px 18px 14px">
+          <div class="cap" style="color:var(--turq)">01 · REQUEST</div>
+          <h3 style="font-size:16px;margin-top:9px">Citizen reports</h3>
+          <p style="font-size:12px;line-height:1.48;color:var(--mut);margin-top:7px">The message, photo and location enter the system as one record.</p>
+        </div>
+      </div>
+
+      <div style="position:absolute;right:0;top:0;width:440px;height:150px;display:grid;grid-template-columns:150px 1fr;background:#fff;border:1px solid var(--line);overflow:hidden">
+        <img src="img/cityvision-talep-dongusu-02-v1.png" alt="AI classification of a request in the municipal operations center" style="width:150px;height:150px;object-fit:cover">
+        <div style="padding:17px 18px 14px">
+          <div class="cap" style="color:var(--turq)">02 · UNDERSTAND</div>
+          <h3 style="font-size:16px;margin-top:9px">AI classifies</h3>
+          <p style="font-size:12px;line-height:1.48;color:var(--mut);margin-top:7px">The topic, urgency and responsible department are suggested within seconds.</p>
+        </div>
+      </div>
+
+      <div style="position:absolute;right:0;bottom:0;width:440px;height:150px;display:grid;grid-template-columns:150px 1fr;background:#fff;border:1px solid var(--line);overflow:hidden">
+        <img src="img/cityvision-talep-dongusu-03-v1.png" alt="Municipal field team repairing the road" style="width:150px;height:150px;object-fit:cover">
+        <div style="padding:17px 18px 14px">
+          <div class="cap" style="color:var(--turq)">03 · RESPOND</div>
+          <h3 style="font-size:16px;margin-top:9px">The team resolves it</h3>
+          <p style="font-size:12px;line-height:1.48;color:var(--mut);margin-top:7px">The right team and route are assigned; field work proceeds through the task record.</p>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;bottom:0;width:440px;height:150px;display:grid;grid-template-columns:150px 1fr;background:var(--green-t);border:1px solid var(--green);overflow:hidden">
+        <img src="img/cityvision-talep-dongusu-04-v1.png" alt="Verification of completed field work and citizen notification" style="width:150px;height:150px;object-fit:cover">
+        <div style="padding:17px 18px 14px">
+          <div class="cap" style="color:var(--green)">04 · VERIFY</div>
+          <h3 style="font-size:16px;margin-top:9px">Closure feeds learning</h3>
+          <p style="font-size:11.6px;line-height:1.42;color:var(--ink2);margin-top:7px">Before-and-after evidence is added, the citizen is notified and the outcome improves the next classification.</p>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:478px;top:129px;width:180px;height:130px;background:var(--green-d);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:18px;box-shadow:0 8px 24px rgba(10,59,39,.12)">
+        <div class="cap" style="color:#67D3C4">LEARNING LOOP</div>
+        <div class="serif" style="font-size:15px;line-height:1.25;margin-top:9px">Every closure improves the next request.</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:8px">Illustrative flow; visuals were created to explain the City Vision service loop.</div>
+    <!-- [Sources] OpenAI ImageGen: cityvision-talep-dongusu-01-v1.png; cityvision-talep-dongusu-02-v1.png; cityvision-talep-dongusu-03-v1.png; cityvision-talep-dongusu-04-v1.png -->
+  </div>
+  <div class="foot"><span>End-to-end flow</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 13 · OPERASYON OMURGASI ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Platform Scope <span class="n">/ 12</span></div>
+    <h1 class="t">Under the AI is <em>a working municipal backbone.</em> </h1>
+    <p class="lead">
+      For the models to create value, the institution's daily work must live in the same system. The platform keeps municipal operational records in one place.
+    </p>
+
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:0;margin-top:26px;border-top:1px solid var(--line);border-left:1px solid var(--line)">
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">Task assignment</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Clear task assignments, schedules and completion tracking.</p>
+      </div>
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">Vehicle tracking</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Fleet location, assignment and utilization efficiency.</p>
+      </div>
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">Shift management</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Team schedules, leave and overtime balance.</p>
+      </div>
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">Inventory management</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Material stock, issue records and request matching.</p>
+      </div>
+
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">Correspondence and documents</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Official correspondence flow and approval chain.</p>
+      </div>
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">Document archive</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Searchable institutional archive with permission-based access.</p>
+      </div>
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">IT support requests</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Internal support records and resolution times.</p>
+      </div>
+      <div style="padding:18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <h3 style="font-size:14.5px;font-weight:650">Users and permissions</h3>
+        <p style="font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px">Role-based access, department hierarchy and audit log.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:0;margin-top:24px;border:1px solid var(--line);background:var(--paper2)">
+      <div style="flex:1;padding:18px 22px;border-right:1px solid var(--line)">
+        <div class="cap" style="color:var(--green)">One data model</div>
+        <div style="font-size:13px;line-height:1.55;margin-top:8px;color:var(--ink2)">Requests, tasks, teams, vehicles and materials meet in the same record; no separate reporting study is required.</div>
+      </div>
+      <div style="flex:1;padding:18px 22px;border-right:1px solid var(--line)">
+        <div class="cap" style="color:var(--green)">Voice command</div>
+        <div style="font-size:13px;line-height:1.55;margin-top:8px;color:var(--ink2)">Field staff can open a record by saying, “Assign the task to Ali,” without stopping their work.</div>
+      </div>
+      <div style="flex:1;padding:18px 22px">
+        <div class="cap" style="color:var(--green)">Mobile first</div>
+        <div style="font-size:13px;line-height:1.55;margin-top:8px;color:var(--ink2)">Field teams view the same record on mobile while managers use desktop.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Operational backbone</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 14 · KİMLER İÇİN ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Users <span class="n">/ 13</span></div>
+    <h1 class="t">A dedicated view for every level <em>of municipal staff.</em></h1>
+
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:22px;margin-top:30px">
+      <div>
+        <svg width="100%" height="120" viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0.5" y="0.5" width="239" height="119" fill="#E8F1EB" stroke="#12603F" stroke-opacity=".3"/>
+          <g stroke="#12603F" stroke-width="1.4" fill="none" transform="translate(96,34)">
+            <path d="M4 44 V26 M18 44 V14 M32 44 V22 M46 44 V6"/><path d="M0 50 h50"/>
+          </g>
+        </svg>
+        <div class="cap" style="margin-top:14px;color:var(--green)">Mayors</div>
+        <h3 style="font-size:16px;font-weight:650;margin-top:8px">Overview and KPI visibility</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.55;margin-top:7px">
+          The city's status on one screen: requests, resolutions, time, carbon and budget impact.
+        </p>
+      </div>
+      <div>
+        <svg width="100%" height="120" viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0.5" y="0.5" width="239" height="119" fill="#F5F7F4" stroke="#DCE3DD"/>
+          <g stroke="#12603F" stroke-width="1.4" fill="none" transform="translate(96,36)">
+            <rect x="0" y="0" width="48" height="14"/><rect x="0" y="20" width="48" height="14"/><rect x="0" y="40" width="30" height="14"/>
+          </g>
+        </svg>
+        <div class="cap" style="margin-top:14px;color:var(--green)">Department Managers</div>
+        <h3 style="font-size:16px;font-weight:650;margin-top:8px">Workload and coordination</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.55;margin-top:7px">
+          The department's queue, team capacity, overdue records and priority order.
+        </p>
+      </div>
+      <div>
+        <svg width="100%" height="120" viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0.5" y="0.5" width="239" height="119" fill="#F5F7F4" stroke="#DCE3DD"/>
+          <g stroke="#12603F" stroke-width="1.4" fill="none" transform="translate(98,34)">
+            <path d="M22 4 a10 10 0 1 1 -0.1 0"/><path d="M22 14 v10 M22 34 h10"/>
+            <rect x="0" y="44" width="44" height="10"/>
+          </g>
+        </svg>
+        <div class="cap" style="margin-top:14px;color:var(--green)">Operators</div>
+        <h3 style="font-size:16px;font-weight:650;margin-top:8px">Fast prioritization and response</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.55;margin-top:7px">
+          Validates and routes incoming requests within seconds and responds to the citizen.
+        </p>
+      </div>
+      <div>
+        <svg width="100%" height="120" viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0.5" y="0.5" width="239" height="119" fill="#E1F2F1" stroke="#0E9C9C" stroke-opacity=".35"/>
+          <g stroke="#0E9C9C" stroke-width="1.4" fill="none" transform="translate(94,40)">
+            <rect x="0" y="8" width="34" height="20" rx="3"/><rect x="34" y="14" width="16" height="14" rx="2"/>
+            <circle cx="10" cy="32" r="4"/><circle cx="42" cy="32" r="4"/>
+          </g>
+        </svg>
+        <div class="cap" style="margin-top:14px;color:var(--turq)">Field Teams</div>
+        <h3 style="font-size:16px;font-weight:650;margin-top:8px">Clear tasks and schedules</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.55;margin-top:7px">
+          Task list, route and completion record on mobile, with photo-based closure.
+        </p>
+      </div>
+    </div>
+
+    <div style="margin-top:30px;border:1px solid var(--line);padding:20px 24px;display:flex;gap:34px;align-items:center">
+      <div style="flex:1">
+        <div class="cap">Adoption approach</div>
+        <div style="font-size:13.5px;line-height:1.6;margin-top:8px;color:var(--ink2)">
+          We do not force staff to change their habits: WhatsApp is already in use, field teams work from mobile and managers see their own queue. Training needs remain low and adoption stays high.
+        </div>
+      </div>
+      <div style="display:flex;gap:26px">
+        <div><div class="kpi sm">4</div><div class="note" style="margin-top:3px">Role types</div></div>
+        <div><div class="kpi sm">One</div><div class="note" style="margin-top:3px">Shared record</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>User roles</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 15 · GÜVENLİK ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Security and Compliance <span class="n">/ 14</span></div>
+    <h1 class="t">Public-sector data, <em>protected to public-sector standards.</em> </h1>
+    <p class="lead">
+      Municipal data belongs to the institution. Hosting location, access permissions and retention periods are determined by the institution, and every action leaves an auditable record.
+    </p>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:0;margin-top:28px;border:1px solid var(--line)">
+      <div style="padding:24px 26px;border-right:1px solid var(--line)">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">Data protection</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.6;margin-top:8px">
+          Data is stored on secure infrastructure under access control. Encryption is applied in transit and at rest.
+        </p>
+      </div>
+      <div style="padding:24px 26px;border-right:1px solid var(--line)">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><rect x="4" y="3" width="16" height="18"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">Auditability</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.6;margin-top:8px">
+          All actions are logged; who changed what and when is traceable, supporting accountability.
+        </p>
+      </div>
+      <div style="padding:24px 26px">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#12603F" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <h3 style="font-size:17px;font-weight:650;margin-top:14px">Reliability</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.6;margin-top:8px">
+          A commitment to service availability and operational continuity, because when municipal work stops, the city stops.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:26px;margin-top:26px">
+      <div style="border:1px solid var(--line);padding:22px 24px">
+        <div class="cap" style="color:var(--turq)">Hosting options</div>
+        <svg viewBox="0 0 480 110" width="100%" height="110" style="margin-top:14px" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Arial">
+          <rect x="0.5" y="0.5" width="232" height="108" fill="#F5F7F4" stroke="#DCE3DD"/>
+          <text x="20" y="34" font-size="13.5" font-weight="650" fill="#0F2019">Cloud</text>
+          <text x="20" y="58" font-size="11.5" fill="#6C7C74">Fast deployment, managed maintenance,</text>
+          <text x="20" y="76" font-size="11.5" fill="#6C7C74">automatic updates.</text>
+          <rect x="248.5" y="0.5" width="231" height="108" fill="#E8F1EB" stroke="#12603F" stroke-opacity=".35"/>
+          <text x="268" y="34" font-size="13.5" font-weight="650" fill="#0F2019">On-premise</text>
+          <text x="268" y="58" font-size="11.5" fill="#33463E">Data remains on the municipality's</text>
+          <text x="268" y="76" font-size="11.5" fill="#33463E">own servers.</text>
+        </svg>
+      </div>
+      <div style="border:1px solid var(--line);padding:22px 24px">
+        <div class="cap" style="color:var(--turq)">Personal data approach</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-top:14px;font-size:12.5px;color:var(--ink2)">
+          <div>› Role-based access</div><div>› Retention policy</div>
+          <div>› Audit log</div><div>› Purpose-limited processing</div>
+          <div>› Data minimization</div><div>› Restricted areas protected from unauthorized access</div>
+        </div>
+        <div style="margin-top:16px;border-left:2px solid var(--green);padding-left:12px;font-size:12.5px;line-height:1.55;color:var(--ink2)">
+          City Vision processes only the data required for the mission; sensitive areas are masked, and access and downloads are logged.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Security and compliance</span><span class="num"></span></div>
+</section>
+
+
+<!-- ═══════════ 16 · BÖLÜM AYRACI: CITY VISION ═══════════ -->
+<section class="slide dark">
+  <img class="bleed" src="img/cityvision-drone-istasyonu.png" alt="Autonomous drone station and city view">
+  <div class="scrim div" style="background:linear-gradient(90deg,#08331F 0%,rgba(8,51,31,.96) 40%,rgba(8,51,31,.65) 64%,rgba(8,51,31,.18) 100%)"></div>
+  <div class="pad">
+    <div style="position:absolute;left:72px;top:190px;width:620px">
+      <div class="eyebrow" style="margin-bottom:20px">New Product · Part Two</div>
+      <h1 class="t" style="font-size:50px;line-height:1.08;color:#fff">
+        Monitor the city from above, <em>on schedule and continuously.</em> 
+      </h1>
+      <p class="lead" style="font-size:16.5px;max-width:560px;margin-top:20px">
+        Using DJI Dock 3 and Matrice 4TD, City Vision scans designated areas through scheduled missions and turns imagery into verified urban events that enter municipal operations.
+      </p>
+      <div style="display:flex;gap:10px;margin-top:30px;flex-wrap:wrap">
+        <span class="chip" style="border-color:rgba(255,255,255,.35);color:#EAF1EC">Scheduled flight</span>
+        <span class="chip" style="border-color:rgba(255,255,255,.35);color:#EAF1EC">Automatic charging</span>
+        <span class="chip" style="border-color:rgba(255,255,255,.35);color:#EAF1EC">AI analysis</span>
+        <span class="chip" style="border-color:rgba(255,255,255,.35);color:#EAF1EC">Work order</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>City Vision · Autonomous City Inspection</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 17 · MATRICE 4TD ═══════════ -->
+<!-- [Sources]
+- https://enterprise.dji.com/dock-3/faq
+- https://enterprise.dji.com/dock-3/specs
+[/Sources] -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Aerial Platform <span class="n">/ 15</span></div>
+    <h1 class="t">The drone we use: <em>DJI Matrice 4TD.</em></h1>
+    <p class="lead">We combine visual inspection, thermal disaster imagery and scheduled municipal missions on one aerial platform.</p>
+
+    <div class="grid" style="grid-template-columns:.84fr 1.36fr;gap:28px;margin-top:24px">
+      <div style="border:1px solid var(--line)">
+        <div style="padding:19px 21px;border-bottom:1px solid var(--line);background:var(--green-t)">
+          <div class="cap" style="color:var(--green)">Multi-sensor</div>
+          <h3 style="font-size:17px;margin-top:7px">Visual + thermal + distance</h3>
+          <p style="font-size:12px;line-height:1.5;color:var(--ink2);margin-top:6px">48 MP wide, medium tele and tele cameras; 640 × 512 thermal camera, NIR auxiliary light and laser rangefinder.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <div style="padding:17px 19px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="cap">Flight</div><div class="serif" style="font-size:27px;color:var(--green);font-weight:700;margin-top:7px">54 min</div><p style="font-size:11px;color:var(--mut);margin-top:3px">Maximum forward flight time*</p></div>
+          <div style="padding:17px 19px;border-bottom:1px solid var(--line)"><div class="cap">Protection</div><div class="serif" style="font-size:27px;color:var(--turq);font-weight:700;margin-top:7px">IP55</div><p style="font-size:11px;color:var(--mut);margin-top:3px">Demanding field conditions</p></div>
+          <div style="padding:17px 19px;border-right:1px solid var(--line)"><div class="cap">Sensing</div><div style="font-size:15px;font-weight:650;margin-top:9px">Omnidirectional vision</div><p style="font-size:11px;color:var(--mut);margin-top:5px">Downward 3D infrared sensor support</p></div>
+          <div style="padding:17px 19px"><div class="cap">Station</div><div style="font-size:15px;font-weight:650;margin-top:9px">DJI Dock 3</div><p style="font-size:11px;color:var(--mut);margin-top:5px">Series designed for autonomous missions</p></div>
+        </div>
+      </div>
+      <div style="height:370px;position:relative;overflow:hidden;border:1px solid var(--line)">
+        <img class="photo" src="img/cityvision-matrice-4td-belediye-v1.png" style="height:370px;width:100%;object-fit:cover;object-position:55% 50%" alt="Municipal inspection with a Matrice 4TD-class drone and autonomous station">
+        <div style="position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(8,51,31,.88),rgba(8,51,31,0));padding:52px 20px 16px;color:white">
+          <div style="font-size:13px;font-weight:650">One platform for scheduled inspection and disaster readiness</div>
+          <div style="font-size:9.5px;color:rgba(255,255,255,.7);margin-top:4px">Photorealistic illustrative visual</div>
+        </div>
+      </div>
+    </div>
+    <div class="source-line">* Manufacturer figure under controlled test conditions; actual duration varies by mission, weather and payload. Source: DJI Dock 3 FAQ and specifications.</div>
+  </div>
+  <div class="foot"><span>City Vision · Matrice 4TD</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 18 · NEDEN MATRICE 4TD ═══════════ -->
+<!-- [Sources]
+- https://enterprise.dji.com/dock-3
+- https://enterprise.dji.com/flighthub-2
+- https://enterprise.dji.com/dock-3/faq
+- https://enterprise.dji.com/dock-3/downloads
+[/Sources] -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Selection Rationale <span class="n">/ 16</span></div>
+    <h1 class="t">Why Matrice 4TD? <em>Autonomy, ecosystem and support.</em></h1>
+    <p class="lead">This choice is not based on camera resolution alone; it is based on an enterprise ecosystem that supports the entire sustainable municipal operation.</p>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px">
+      <div style="border:1px solid var(--green);background:var(--green-t);padding:24px 24px;height:288px">
+        <div class="serif" style="font-size:35px;color:var(--green)">01</div>
+        <div class="cap" style="color:var(--green);margin-top:15px">Autonomous flight</div>
+        <h3 style="font-size:18px;margin-top:8px">Repeatable missions with Dock 3</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:10px">Scheduled takeoff, defined routes, precision return, automatic media upload and recharging. The same location is monitored repeatedly to the same standard.</p>
+      </div>
+      <div style="border:1px solid var(--line);padding:24px 24px;height:288px">
+        <div class="serif" style="font-size:35px;color:var(--turq)">02</div>
+        <div class="cap" style="color:var(--turq);margin-top:15px">DJI support</div>
+        <h3 style="font-size:18px;margin-top:8px">FlightHub 2 + Pilot 2 + Cloud API</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:10px">Remote control, smart mission scheduling, route management and third-party integrations are supported within the same product family.</p>
+      </div>
+      <div style="border:1px solid var(--line);padding:24px 24px;height:288px;background:var(--paper2)">
+        <div class="serif" style="font-size:35px;color:var(--sand)">03</div>
+        <div class="cap" style="color:var(--sand);margin-top:15px">Technical support</div>
+        <h3 style="font-size:18px;margin-top:8px">Manufacturer lifecycle + GBSoft field support</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:10px">Official firmware, DJI Assistant 2/Enterprise tools and developer support, with deployment, integration, route and operational monitoring managed by GBSoft.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:22px;border-left:3px solid var(--green);padding:15px 18px;background:var(--paper2);font-size:13px;color:var(--ink2)"><strong>Outcome:</strong> Matrice 4TD supports not a one-time imaging need, but a continuous, traceable and supportable aerial operation for the municipality.</div>
+    <div class="source-line">Source: DJI Dock 3 product, FAQ and downloads; DJI FlightHub 2 product and FAQ pages.</div>
+  </div>
+  <div class="foot"><span>City Vision · Why 4TD?</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 19 · PROBLEM ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Problem <span class="n">/ 17</span></div>
+    <h1 class="t">Municipalities often learn about urban problems <em>too late.</em></h1>
+    <p class="lead">Citizen reports and human field inspections are valuable, but repeatedly scanning a large area at the same frequency, angle and evidentiary standard is difficult.</p>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:0;margin-top:28px;border:1px solid var(--line)">
+      <div style="padding:22px 24px;border-right:1px solid var(--line)">
+        <div class="cap">Visibility gap</div>
+        <h3 style="font-size:16px;font-weight:650;margin-top:8px">Unreported problems do not enter the record</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.55;margin-top:7px">Quiet neighborhoods and hard-to-reach areas are inspected less frequently.</p>
+      </div>
+      <div style="padding:22px 24px;border-right:1px solid var(--line)">
+        <div class="cap">Repeatability gap</div>
+        <h3 style="font-size:16px;font-weight:650;margin-top:8px">The same location is not captured to the same standard</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.55;margin-top:7px">Measuring change requires repeating the same route, altitude and camera angle.</p>
+      </div>
+      <div style="padding:22px 24px">
+        <div class="cap">Operational burden</div>
+        <h3 style="font-size:16px;font-weight:650;margin-top:8px">Inspection depends on staff availability</h3>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.55;margin-top:7px">Field preparation, travel and data transfer limit the number of missions.</p>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.12fr .88fr;border:1px solid var(--line);margin-top:24px;height:205px">
+      <div style="position:relative;overflow:hidden">
+        <img class="photo" src="img/road_wide.jpg" style="width:100%;height:205px;object-position:50% 82%" alt="Road surface damage">
+        <div style="position:absolute;left:20px;bottom:18px;background:#A8442F;color:white;padding:7px 11px;font-size:11px;font-weight:700;letter-spacing:.08em">DAMAGE NOT DETECTED EARLY</div>
+      </div>
+      <div style="padding:26px 28px;background:var(--paper2)">
+        <div class="cap" style="color:var(--brick)">Outcome</div>
+        <div class="serif" style="font-size:24px;line-height:1.25;font-weight:700;margin-top:12px">The problem grows, increasing repair cost and response time.</div>
+        <p style="font-size:12.5px;color:var(--mut);line-height:1.6;margin-top:14px">City Vision does not replace human inspection; it strengthens it with prioritized, geolocated and comparable evidence.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>City Vision · Problem</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 20 · ÇÖZÜM ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Solution <span class="n">/ 18</span></div>
+    <h1 class="t">We turn Matrice 4TD into <em>an autonomous city sensor.</em> </h1>
+    <p class="lead">DJI Dock 3 protects the drone, prepares it for missions, launches, lands and charges it automatically. GBSoft manages the entire mission and every resulting finding in one flow.</p>
+
+    <div class="grid" style="grid-template-columns:.95fr 1.25fr;gap:28px;margin-top:26px">
+      <div style="border:1px solid var(--line)">
+        <div style="padding:21px 22px;border-bottom:1px solid var(--line)">
+          <div class="cap">01 · Ready on site</div>
+          <h3 style="font-size:16px;margin-top:7px">Autonomous flight station</h3>
+          <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:6px">Monitors weather, power and connectivity while protecting and charging the drone.</p>
+        </div>
+        <div style="padding:21px 22px;border-bottom:1px solid var(--line);background:var(--green-t)">
+          <div class="cap" style="color:var(--green)">02 · Repeats the mission</div>
+          <h3 style="font-size:16px;margin-top:7px">DJI Matrice 4TD</h3>
+          <p style="font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:6px">Executes defined routes, altitude, speed and visual or thermal capture points to the same standard.</p>
+        </div>
+        <div style="padding:21px 22px">
+          <div class="cap">03 · Connects results to operations</div>
+          <h3 style="font-size:16px;margin-top:7px">GBSoft + City Vision</h3>
+          <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:6px">Media, telemetry, AI findings, human approval and the work order come together in one record.</p>
+        </div>
+      </div>
+      <div style="position:relative;height:370px;overflow:hidden;border:1px solid var(--line)">
+        <img class="photo" src="img/cityvision-hava-denetimi.png" style="height:370px;width:100%;object-fit:cover;object-position:50% 20%" alt="Aerial municipal inspection">
+        <div style="position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(8,51,31,.94),rgba(8,51,31,.18));padding:54px 24px 20px;color:#fff">
+          <div style="font-size:17px;font-weight:650">One mission, multiple municipal needs</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.74);margin-top:7px">Roads · waste and excavation · unpermitted construction · thermal disaster evidence · sidewalk occupation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>City Vision · Autonomous Sensor Model</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 21 · OPERASYON MODELİ ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Operating Model <span class="n">/ 19</span></div>
+    <h1 class="t">The drone stays ready on site; <em>the mission is managed centrally.</em></h1>
+    <p class="lead">Dock 3 is deployed at a secure, fixed location; route planning, mission tracking and visual analysis are managed from the municipal operations center.</p>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:22px;margin-top:22px">
+      <div style="border:1px solid var(--line);background:var(--paper2);overflow:hidden">
+        <img src="img/cityvision-dock3-belediye-catisi-v1.png" alt="DJI Dock 3 and Matrice 4TD on a municipal building rooftop" style="width:100%;height:216px;display:block;object-fit:cover;object-position:50% 52%">
+        <div style="padding:17px 20px 18px">
+          <div class="cap" style="color:var(--turq)">Field layer</div>
+          <h3 style="font-size:18px;margin-top:7px">Dock 3 on the municipal rooftop</h3>
+          <p style="font-size:12.5px;line-height:1.5;color:var(--mut);margin-top:7px">Matrice 4TD stays ready for scheduled missions in a protected station with continuous power and connectivity.</p>
+        </div>
+      </div>
+      <div style="border:1px solid var(--green);background:var(--green-t);overflow:hidden">
+        <img src="img/cityvision-kontrol-merkezi-iki-ekran-v1.png" alt="Two-screen municipal drone control center" style="width:100%;height:216px;display:block;object-fit:cover;object-position:50% 48%">
+        <div style="padding:17px 20px 18px">
+          <div class="cap" style="color:var(--green)">Operations layer</div>
+          <h3 style="font-size:18px;margin-top:7px">Two screens, one mission flow</h3>
+          <p style="font-size:12.5px;line-height:1.5;color:var(--ink2);margin-top:7px">The route is monitored on the left and visual analysis on the right; the operator launches the mission centrally and intervenes when required.</p>
+        </div>
+      </div>
+    </div>
+    <!-- [Sources] DJI official product references: https://enterprise.dji.com/dock-3 and https://www.dji.com/media-center/announcements/dji-release-dock-3 ; OpenAI ImageGen: cityvision-dock3-belediye-catisi-v1.png, cityvision-kontrol-merkezi-iki-ekran-v1.png -->
+  </div>
+  <div class="foot"><span>City Vision · Operating Model</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 22 · YETENEK HARİTASI ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Capability Map <span class="n">/ 20</span></div>
+    <h1 class="t">Six core capabilities <em>for autonomous operations.</em></h1>
+    <p class="lead">When flight automation, data collection and municipal integration work together, the drone becomes a continuous source of field data.</p>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:0;margin-top:30px;border:1px solid var(--line)">
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="cap">Scheduling</div><h3 style="font-size:16px;margin-top:8px">Scheduled flight</h3><p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:6px">Daily, weekly or event-based missions using the same route and capture parameters.</p></div>
+      <div style="padding:22px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--green-t)"><div class="cap" style="color:var(--green)">Autonomy</div><h3 style="font-size:16px;margin-top:8px">Takeoff, return and charging</h3><p style="font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:6px">Preparation, precision landing and readiness for the next mission are automated.</p></div>
+      <div style="padding:22px 24px;border-bottom:1px solid var(--line)"><div class="cap">Oversight</div><h3 style="font-size:16px;margin-top:8px">Live mission monitoring</h3><p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:6px">The operator monitors the flight, station status and camera centrally and intervenes when needed.</p></div>
+      <div style="padding:22px 24px;border-right:1px solid var(--line)"><div class="cap">Data</div><h3 style="font-size:16px;margin-top:8px">Automatic media transfer</h3><p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:6px">Photos, video, location, mission and health data enter the analysis queue.</p></div>
+      <div style="padding:22px 24px;border-right:1px solid var(--line);background:var(--turq-t)"><div class="cap" style="color:var(--turq)">Analysis</div><h3 style="font-size:16px;margin-top:8px">AI and change detection</h3><p style="font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:6px">Detection, segmentation, period comparison and confidence scores are produced.</p></div>
+      <div style="padding:22px 24px"><div class="cap">Scale</div><h3 style="font-size:16px;margin-top:8px">Multi-station management</h3><p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:6px">As new districts are added, missions, maintenance status and events are managed from the same center.</p></div>
+    </div>
+
+    <div style="margin-top:22px;border-left:3px solid var(--sand);background:var(--sand-t);padding:15px 18px;font-size:12.5px;line-height:1.55;color:var(--ink2)"><strong>Critical principle:</strong> The autonomous system repeats missions; safe-flight decisions, permissions and operator intervention when needed remain integral to the system.</div>
+  </div>
+  <div class="foot"><span>City Vision · Capabilities</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 23 · TOPLADIĞIMIZ VERİLER ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Collected Data <span class="n">/ 21</span></div>
+    <h1 class="t">We turn six critical urban issues <em>into geolocated evidence.</em> </h1>
+    <p class="lead">Every finding is recorded with imagery, coordinates, time, mission ID, confidence score and previous observations.</p>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px">
+      <div class="data-card"><div class="visual"><img src="img/cityvision-yol-altyapi-detection.png" alt="Road surface defect detection"><span class="img-en-label" style="left:53%;top:9%">ROAD PATCH · 88%</span><span class="img-en-label" style="left:38%;top:29%">CRACK · 91%</span><span class="img-en-label" style="left:29%;top:75%">POTHOLE · 94%</span><span class="chip g" style="position:absolute;left:10px;top:9px;background:rgba(232,241,235,.94)">Visual</span></div><div class="copy"><h3>Road defects</h3><p>Potholes, cracks, surface loss and post-maintenance verification.</p></div></div>
+      <div class="data-card"><div class="visual"><img src="img/cityvision-konteyner-tasma-v1.png" alt="Overflowing waste container and adjacent waste"><span class="chip g" style="position:absolute;left:10px;top:9px;background:rgba(232,241,235,.94)">Visual</span></div><div class="copy"><h3>Waste overflow and adjacent waste</h3><p>Full containers, bags left beside them and surrounding spread.</p></div></div>
+      <div class="data-card"><div class="visual"><img src="img/cityvision-atik-hafriyat-detection.png" alt="Illegal excavation dumping detection"><span class="img-en-label" style="right:4%;top:9%">AUTHORIZED SITE · 93%</span><span class="img-en-label" style="left:24%;top:16%">ILLEGAL DUMPING · 97%</span><span class="img-en-label" style="left:55%;top:65%">CASE #EXC-218</span><span class="chip g" style="position:absolute;left:10px;top:9px;background:rgba(232,241,235,.94)">Visual AI</span></div><div class="copy"><h3>Illegal excavation dumping</h3><p>Debris, excavated soil and unauthorized dumping sites.</p></div></div>
+      <div class="data-card"><div class="visual"><img src="img/cityvision-imar-degisim-detection.png" alt="Unpermitted construction and periodic change"><span class="img-en-label" style="left:4%;top:9%">BEFORE</span><span class="img-en-label" style="right:4%;top:9%">AFTER</span><span class="img-en-label" style="right:0%;top:59%">CONSTRUCTION CHANGE · 96%</span><span class="chip g" style="position:absolute;left:10px;top:9px;background:rgba(232,241,235,.94)">Change</span></div><div class="copy"><h3>Unpermitted construction</h3><p>New structures, roof or facade changes and potential unlicensed expansion.</p></div></div>
+      <div class="data-card"><div class="visual"><img src="img/cityvision-termal-afet-detection.png" alt="Disaster imagery captured with a thermal camera"><span class="img-en-label amber" style="left:70%;top:22%">SMOKE · 92%</span><span class="img-en-label amber" style="left:54%;top:71%">HOTSPOT · 97%</span><span class="chip t" style="position:absolute;left:10px;top:9px;background:rgba(225,242,241,.94)">Thermal</span></div><div class="copy"><h3>Disaster and thermal imagery</h3><p>Hotspots, fire perimeter and emergency visibility.</p></div></div>
+      <div class="data-card"><div class="visual"><img src="img/cityvision-kaldirim-isgali-v1.png" alt="Sidewalk occupation narrowing pedestrian access"><span class="chip g" style="position:absolute;left:10px;top:9px;background:rgba(232,241,235,.94)">Visual</span></div><div class="copy"><h3>Sidewalk occupation</h3><p>Pedestrian space narrowed by tables, merchandise, vehicles or materials.</p></div></div>
+    </div>
+    <div class="source-line">The new photorealistic waste and sidewalk images are illustrative presentation assets; detections are validated with field data during a real pilot.</div>
+  </div>
+  <div class="foot"><span>City Vision · Data Classes</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 24 · OTOMATİK SEEEV AKIŞI ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Automated Task <span class="n">/ 22</span></div>
+    <h1 class="t">A finding does not remain on the map; <em>it becomes an automated task.</em></h1>
+    <p class="lead">When location, event type and municipal responsibility area match, the system creates the correct work record and routes it to the relevant department.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:32px;border:1px solid var(--line);height:235px">
+      <div style="padding:24px 19px;border-right:1px solid var(--line)"><div class="serif" style="font-size:29px;color:var(--turq)">01</div><div class="cap" style="margin-top:17px">Detection</div><h3 style="font-size:16px;margin-top:8px">Classify the event</h3><p style="font-size:11.5px;line-height:1.5;color:var(--mut);margin-top:7px">Road, waste, excavation, construction, disaster or occupation.</p></div>
+      <div style="padding:24px 19px;border-right:1px solid var(--line);background:var(--turq-t)"><div class="serif" style="font-size:29px;color:var(--turq)">02</div><div class="cap" style="color:var(--turq);margin-top:17px">Location</div><h3 style="font-size:16px;margin-top:8px">Match automatically</h3><p style="font-size:11.5px;line-height:1.5;color:var(--ink2);margin-top:7px">Match the coordinates with parcel, road, neighborhood and service area.</p></div>
+      <div style="padding:24px 19px;border-right:1px solid var(--line)"><div class="serif" style="font-size:29px;color:var(--green)">03</div><div class="cap" style="margin-top:17px">Record</div><h3 style="font-size:16px;margin-top:8px">Create the task automatically</h3><p style="font-size:11.5px;line-height:1.5;color:var(--mut);margin-top:7px">Add photo, time, confidence, priority and service duration.</p></div>
+      <div style="padding:24px 19px;border-right:1px solid var(--line);background:var(--green-t)"><div class="serif" style="font-size:29px;color:var(--green)">04</div><div class="cap" style="color:var(--green);margin-top:17px">Assignment</div><h3 style="font-size:16px;margin-top:8px">Route to the relevant department</h3><p style="font-size:11.5px;line-height:1.5;color:var(--ink2);margin-top:7px">Use the responsibility matrix to determine the department, team and responsible user.</p></div>
+      <div style="padding:24px 19px"><div class="serif" style="font-size:29px;color:var(--sand)">05</div><div class="cap" style="margin-top:17px">Closure</div><h3 style="font-size:16px;margin-top:8px">Verify the outcome</h3><p style="font-size:11.5px;line-height:1.5;color:var(--mut);margin-top:7px">Create before-and-after evidence with a field photo or repeat flight.</p></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px">
+      <div style="border-left:3px solid var(--green);padding:12px 15px;background:var(--paper2)"><div class="cap">Example</div><div style="font-size:13px;font-weight:650;margin-top:6px">Pothole → Public Works</div></div>
+      <div style="border-left:3px solid var(--turq);padding:12px 15px;background:var(--paper2)"><div class="cap">Example</div><div style="font-size:13px;font-weight:650;margin-top:6px">Waste overflow → Sanitation</div></div>
+      <div style="border-left:3px solid var(--sand);padding:12px 15px;background:var(--paper2)"><div class="cap">Example</div><div style="font-size:13px;font-weight:650;margin-top:6px">Unpermitted structure / sidewalk → Planning + Municipal Police</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>City Vision · From Location to Work Order</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 25 · ANALİZ ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Decision Analytics <span class="n">/ 23</span></div>
+    <h1 class="t">From individual events, <em>to city-wide behavior.</em> </h1>
+    <p class="lead">Task records do more than close; they become neighborhood, hourly and trend analysis that guides budgets, teams and inspection planning.</p>
+
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px">
+      <div style="border:1px solid var(--line);padding:23px 23px;height:280px">
+        <div class="cap" style="color:var(--green)">By neighborhood</div>
+        <div class="serif" style="font-size:31px;color:var(--green);font-weight:700;margin-top:13px">Where?</div>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:9px">Issue density, recurring hotspots and response times are compared by neighborhood boundaries.</p>
+        <div style="margin-top:22px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+          <i style="height:30px;background:#D8E8DE"></i><i style="height:30px;background:#8EC4A7"></i><i style="height:30px;background:#12603F"></i><i style="height:30px;background:#B7D6C3"></i><i style="height:30px;background:#E8F1EB"></i>
+        </div>
+      </div>
+      <div style="border:1px solid var(--line);padding:23px 23px;height:280px;background:var(--paper2)">
+        <div class="cap" style="color:var(--turq)">By hour</div>
+        <div class="serif" style="font-size:31px;color:var(--turq);font-weight:700;margin-top:13px">When?</div>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--mut);margin-top:9px">Hourly patterns of waste overflow, sidewalk occupation and high-density events become visible.</p>
+        <div style="display:flex;align-items:flex-end;gap:7px;height:52px;margin-top:16px"><i style="width:12%;height:18%;background:#B9DDDB"></i><i style="width:12%;height:28%;background:#8CCBC7"></i><i style="width:12%;height:45%;background:#5AB7B3"></i><i style="width:12%;height:80%;background:#0E9C9C"></i><i style="width:12%;height:62%;background:#3AAEAA"></i><i style="width:12%;height:92%;background:#087E7E"></i><i style="width:12%;height:38%;background:#8CCBC7"></i></div>
+      </div>
+      <div style="border:1px solid var(--line);padding:23px 23px;height:280px;background:var(--green-t)">
+        <div class="cap" style="color:var(--sand)">By trend</div>
+        <div class="serif" style="font-size:31px;color:var(--sand);font-weight:700;margin-top:13px">How is it changing?</div>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:9px">Weekly and monthly recurrence reveals increases, decreases, seasonality and sustained improvement after intervention.</p>
+        <svg viewBox="0 0 280 58" style="width:100%;height:58px;margin-top:14px"><path d="M4 48 C42 44,48 24,78 31 S125 42,152 21 S207 30,276 7" fill="none" stroke="#B8862B" stroke-width="4"/><path d="M4 48 H276" stroke="#C6D1C8"/></svg>
+      </div>
+    </div>
+
+    <div style="margin-top:23px;border-left:3px solid var(--green);padding:15px 18px;background:var(--paper2);font-size:13px;color:var(--ink2)"><strong>Management output:</strong> The required team capacity and inspection route become measurable by neighborhood and time window.</div>
+  </div>
+  <div class="foot"><span>City Vision · Neighborhood, Hour and Trend</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 26 · MİMARİ ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Software Architecture <span class="n">/ 24</span></div>
+    <h1 class="t">Hardware-independent value is created <em>in the GBSoft workflow.</em> </h1>
+    <p class="lead">The DJI FlightHub 2 and Cloud API layer carries missions, telemetry and media; GBSoft connects analysis results to the municipality's existing operations.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 56px 1fr 56px 1.15fr 56px 1fr;align-items:stretch;margin-top:36px;height:150px">
+      <div style="background:var(--green-d);color:white;padding:22px;border:1px solid var(--green-d)"><div class="cap" style="color:#67D3C4">Field</div><h3 style="font-size:17px;margin-top:9px">Dock 3 + Matrice 4TD</h3><p style="font-size:12px;line-height:1.5;color:rgba(255,255,255,.72);margin-top:8px">Flight, visual and thermal sensors, charging, weather and site camera</p></div>
+      <div style="display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--mut2)">→</div>
+      <div style="background:var(--turq);color:white;padding:22px;border:1px solid var(--turq)"><div class="cap" style="color:#D9FFFF">DJI layer</div><h3 style="font-size:17px;margin-top:9px">FlightHub 2 / Cloud API</h3><p style="font-size:12px;line-height:1.5;color:rgba(255,255,255,.82);margin-top:8px">Mission commands, telemetry, live streaming and media transfer</p></div>
+      <div style="display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--mut2)">→</div>
+      <div style="background:var(--green);color:white;padding:22px;border:1px solid var(--green)"><div class="cap" style="color:#AEE5D2">GBSoft Core</div><h3 style="font-size:17px;margin-top:9px">Mission and data engine</h3><p style="font-size:12px;line-height:1.5;color:rgba(255,255,255,.82);margin-top:8px">Permissions, route version, media linkage, audit trail and event record</p></div>
+      <div style="display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--mut2)">→</div>
+      <div style="background:var(--sand-t);padding:22px;border:1px solid var(--sand)"><div class="cap" style="color:var(--sand)">City Vision</div><h3 style="font-size:17px;margin-top:9px">AI + work order</h3><p style="font-size:12px;line-height:1.5;color:var(--ink2);margin-top:8px">Detection, confidence, human approval, department and closure evidence</p></div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:0;margin-top:28px;border:1px solid var(--line)">
+      <div style="padding:17px 18px;border-right:1px solid var(--line)"><div class="cap">Mission management</div><p style="font-size:12px;line-height:1.5;color:var(--mut);margin-top:7px">Scheduling, safety checks, stopping and repeat flight.</p></div>
+      <div style="padding:17px 18px;border-right:1px solid var(--line)"><div class="cap">Data layer</div><p style="font-size:12px;line-height:1.5;color:var(--mut);margin-top:7px">Object storage, map data, media and change history.</p></div>
+      <div style="padding:17px 18px;border-right:1px solid var(--line)"><div class="cap">AI services</div><p style="font-size:12px;line-height:1.5;color:var(--mut);margin-top:7px">Detection, segmentation, comparison and confidence scoring.</p></div>
+      <div style="padding:17px 18px"><div class="cap">Municipal workflow</div><p style="font-size:12px;line-height:1.5;color:var(--mut);margin-top:7px">Department routing, team assignment, time tracking and closure.</p></div>
+    </div>
+    <div class="source-line">Source: DJI FlightHub 2 product and FAQ; DJI Dock 3 FAQ; DJI Developer Cloud API.</div>
+  </div>
+  <div class="foot"><span>City Vision · Integration Architecture</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 27 · YAPAY ZEKÂ ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Artificial Intelligence <span class="n">/ 25</span></div>
+    <h1 class="t">AI operates in three modes, <em>depending on mission needs.</em></h1>
+    <p class="lead">The analysis mode is selected by mission type; the operator monitors all critical processes and creates a closer inspection mission when needed.</p>
+
+    <div style="margin-top:30px;border:1px solid var(--line)">
+      <div style="display:grid;grid-template-columns:72px 1fr 160px;align-items:center;padding:22px 24px;border-bottom:1px solid var(--line);background:var(--green-t)">
+        <div class="serif" style="font-size:31px;color:var(--green)">A</div><div><h3 style="font-size:17px">Post-mission analysis</h3><p style="font-size:12.5px;color:var(--ink2);margin-top:6px">Photos are transferred after landing for road, waste, construction and change analysis.</p></div><span class="chip g" style="text-align:center">Standard analysis</span>
+      </div>
+      <div style="display:grid;grid-template-columns:72px 1fr 160px;align-items:center;padding:22px 24px;border-bottom:1px solid var(--line)">
+        <div class="serif" style="font-size:31px;color:var(--turq)">B</div><div><h3 style="font-size:17px">Live stream analysis</h3><p style="font-size:12.5px;color:var(--mut);margin-top:6px">The video stream reaches the server and generates real-time alerts for disasters, fires and emergencies.</p></div><span class="chip t" style="text-align:center">Real time</span>
+      </div>
+      <div style="display:grid;grid-template-columns:72px 1fr 160px;align-items:center;padding:22px 24px">
+        <div class="serif" style="font-size:31px;color:var(--sand)">C</div><div><h3 style="font-size:17px">Onboard analysis</h3><p style="font-size:12.5px;color:var(--mut);margin-top:6px">Selected algorithms run in the field for specialized missions requiring low latency.</p></div><span class="chip" style="text-align:center;border-color:var(--sand);color:var(--sand)">Edge AI</span>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:22px">
+      <div style="padding:18px 20px;border-left:3px solid var(--green);background:var(--paper2)"><div class="cap">Data policy</div><p style="font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:7px">Mission media is retained under a controlled policy; access, downloads and changes are written to the audit log.</p></div>
+      <div style="padding:18px 20px;border-left:3px solid var(--turq);background:var(--paper2)"><div class="cap">Decision policy</div><p style="font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:7px">Findings with sensitive implications, such as violations, planning and safety, do not become actions without authorized staff approval.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>City Vision · AI Processing Model</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 28 · GÜVEN MOTORU ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Confidence Engine <span class="n">/ 26</span></div>
+    <h1 class="t">If the system is uncertain, <em>it does not create a work order.</em></h1>
+    <p class="lead">Each finding is based not on a single image, but on a combination of image quality, location, repeat observation and periodic change signals.</p>
+
+    <div class="grid" style="grid-template-columns:1.05fr .95fr;gap:28px;margin-top:28px">
+      <div style="border:1px solid var(--line);padding:22px 24px">
+        <div class="cap">How is confidence calculated?</div>
+        <div style="margin-top:20px">
+          <div style="display:grid;grid-template-columns:180px 1fr 48px;gap:12px;align-items:center;margin-bottom:17px"><span style="font-size:13px">Image analysis</span><div style="height:9px;background:var(--paper3)"><div style="height:9px;width:87%;background:var(--green)"></div></div><strong style="font-size:13px">%87</strong></div>
+          <div style="display:grid;grid-template-columns:180px 1fr 48px;gap:12px;align-items:center;margin-bottom:17px"><span style="font-size:13px">Location accuracy</span><div style="height:9px;background:var(--paper3)"><div style="height:9px;width:92%;background:var(--turq)"></div></div><strong style="font-size:13px">%92</strong></div>
+          <div style="display:grid;grid-template-columns:180px 1fr 48px;gap:12px;align-items:center;margin-bottom:17px"><span style="font-size:13px">Repeat observation</span><div style="height:9px;background:var(--paper3)"><div style="height:9px;width:78%;background:var(--sand)"></div></div><strong style="font-size:13px">+8</strong></div>
+          <div style="display:grid;grid-template-columns:180px 1fr 48px;gap:12px;align-items:center"><span style="font-size:13px">Periodic change</span><div style="height:9px;background:var(--paper3)"><div style="height:9px;width:84%;background:var(--green)"></div></div><strong style="font-size:13px">+9</strong></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:18px;border-top:1px solid var(--line)"><span style="font-size:14px;font-weight:650">Event confidence</span><span class="serif" style="font-size:34px;color:var(--green);font-weight:700">%96</span></div>
+      </div>
+      <div style="border:1px solid var(--line)">
+        <div style="padding:18px 22px;border-bottom:1px solid var(--line);background:var(--green-t)"><div style="display:flex;justify-content:space-between"><strong>95% and above</strong><span class="chip g">Automatic candidate</span></div><p style="font-size:12px;color:var(--ink2);margin-top:7px">Work-order proposal ready for the operator.</p></div>
+        <div style="padding:18px 22px;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between"><strong>85% - 95%</strong><span class="chip t">Quick approval</span></div><p style="font-size:12px;color:var(--mut);margin-top:7px">Strong finding; brief human review.</p></div>
+        <div style="padding:18px 22px;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between"><strong>70% - 85%</strong><span class="chip">Review</span></div><p style="font-size:12px;color:var(--mut);margin-top:7px">Record requiring evidence and closer imagery.</p></div>
+        <div style="padding:18px 22px"><div style="display:flex;justify-content:space-between"><strong>Below 70%</strong><span class="chip" style="color:var(--mut2)">Silent</span></div><p style="font-size:12px;color:var(--mut);margin-top:7px">Not sent to operations; retained in the model improvement archive.</p></div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:18px">Sample confidence values are illustrative. Thresholds are calibrated separately for each municipality and use case using institutional data.</div>
+  </div>
+  <div class="foot"><span>City Vision · Confidence and Human Approval</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 29 · BÜTÜNLEŞİK YAPI ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>Integrated Structure <span class="n">/ 27</span></div>
+    <h1 class="t">City Vision sees it; <em>the platform completes the work.</em></h1>
+    <p class="lead">A drone detection does not remain on a separate screen; it enters the same event pool as citizen requests and connects to the right department and team.</p>
+
+    <div style="display:grid;grid-template-columns:250px 64px 340px 64px 1fr;align-items:center;margin-top:38px">
+      <div>
+        <div style="border:1px solid var(--line);padding:18px 20px;margin-bottom:14px"><div class="cap">Input 01</div><h3 style="font-size:15.5px;margin-top:7px">Citizen request</h3><p style="font-size:12px;color:var(--mut);margin-top:6px">WhatsApp · call · web · in-person request</p></div>
+        <div style="border:1px solid var(--turq);background:var(--turq-t);padding:18px 20px"><div class="cap" style="color:var(--turq)">Input 02 · New</div><h3 style="font-size:15.5px;margin-top:7px">City Vision finding</h3><p style="font-size:12px;color:var(--ink2);margin-top:6px">Drone mission · location · evidence · confidence score</p></div>
+      </div>
+      <div style="font-size:30px;color:var(--mut2);text-align:center">→</div>
+      <div style="border:1px solid var(--green);background:var(--green-t);padding:28px 26px;text-align:center">
+        <div class="cap" style="color:var(--green)">GBSoft Platform</div>
+        <div class="serif" style="font-size:26px;font-weight:700;margin-top:12px">Event pool</div>
+        <p style="font-size:12.5px;line-height:1.7;color:var(--ink2);margin-top:14px">type · location · severity · evidence<br>confidence · department · priority<br>team · vehicle · duration · closure</p>
+      </div>
+      <div style="font-size:30px;color:var(--mut2);text-align:center">→</div>
+      <div>
+        <div style="border-left:3px solid var(--green);padding:11px 16px;margin-bottom:11px;background:var(--paper2)"><h3 style="font-size:14.5px">Public Works</h3><p style="font-size:11.5px;color:var(--mut);margin-top:4px">Roads, infrastructure, excavation and post-maintenance verification</p></div>
+        <div style="border-left:3px solid var(--turq);padding:11px 16px;margin-bottom:11px;background:var(--paper2)"><h3 style="font-size:14.5px">Sanitation / Environmental Protection</h3><p style="font-size:11.5px;color:var(--mut);margin-top:4px">Container overflow, adjacent waste and illegal excavation dumping</p></div>
+        <div style="border-left:3px solid var(--sand);padding:11px 16px;margin-bottom:11px;background:var(--paper2)"><h3 style="font-size:14.5px">Planning / Municipal Police</h3><p style="font-size:11.5px;color:var(--mut);margin-top:4px">Unpermitted structures, sidewalk occupation and field evidence</p></div>
+        <div style="border-left:3px solid var(--green-d);padding:11px 16px;background:var(--green-t)"><h3 style="font-size:14.5px">Disaster Affairs / Citizen Service Desk</h3><p style="font-size:11.5px;color:var(--ink2);margin-top:4px">Thermal event, emergency priority and management visibility</p></div>
+      </div>
+    </div>
+    <div style="margin-top:28px;text-align:center;font-size:13px;color:var(--green);font-weight:650">The municipality does not learn a new system: same user, same task, same work-order format.</div>
+  </div>
+  <div class="foot"><span>Platform + City Vision</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 30 · GÜVENLİK VE İZİNLER ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Safety and Permissions <span class="n">/ 28</span></div>
+    <h1 class="t">Autonomous does not mean <em>unrestricted.</em></h1>
+    <p class="lead">Flight automation is designed together with airspace permissions, urban obstacles, power, connectivity and human oversight.</p>
+
+    <div style="display:grid;grid-template-columns:650px 1fr;gap:24px;margin-top:24px;height:354px">
+      <div style="position:relative;overflow:hidden;border:1px solid var(--line)">
+        <img src="img/cityvision-guvenli-ucus-koridoru-v1.png" alt="Authorized flight corridor and restricted areas for Matrice 4TD" style="width:100%;height:100%;display:block;object-fit:cover;object-position:49% 50%">
+        <div style="position:absolute;left:16px;bottom:15px;background:rgba(10,59,39,.92);color:#fff;padding:10px 13px;font-size:11.5px;line-height:1.35"><strong style="color:#67D3C4">Green area</strong> · authorized mission corridor<br><strong style="color:#F2A999">Red area</strong> · excluded area</div>
+      </div>
+      <div style="border:1px solid var(--line);background:#fff;padding:16px 20px">
+        <div style="padding:8px 0 12px;border-bottom:1px solid var(--line)"><div class="cap">Flight area</div><h3 style="font-size:15.5px;margin-top:5px">Authorized corridor</h3><p style="font-size:11.5px;color:var(--mut);margin-top:4px">Permissions and mission boundaries are defined before flight.</p></div>
+        <div style="padding:11px 0;border-bottom:1px solid var(--line)"><div class="cap">Field</div><h3 style="font-size:15.5px;margin-top:5px">Secure station</h3><p style="font-size:11.5px;color:var(--mut);margin-top:4px">Power, connectivity and the takeoff and landing area are verified.</p></div>
+        <div style="padding:11px 0;border-bottom:1px solid var(--line)"><div class="cap">Weather</div><h3 style="font-size:15.5px;margin-top:5px">Pre-mission check</h3><p style="font-size:11.5px;color:var(--mut);margin-top:4px">Wind, precipitation, visibility and temperature limits are checked.</p></div>
+        <div style="padding:11px 0 12px;border-bottom:1px solid var(--line);background:var(--green-t);margin:0 -20px;padding-left:20px;padding-right:20px"><div class="cap" style="color:var(--green)">Human</div><h3 style="font-size:15.5px;margin-top:5px">Central oversight</h3><p style="font-size:11.5px;color:var(--ink2);margin-top:4px">The operator monitors and can stop the mission, intervening when necessary.</p></div>
+        <div style="display:grid;grid-template-columns:1fr 1.25fr;gap:14px;padding-top:13px">
+          <div><div class="serif" style="font-size:24px;color:var(--green);font-weight:700">2-3 km</div><div style="font-size:10.5px;color:var(--mut);margin-top:3px">Dense urban mission radius</div></div>
+          <div><div class="serif" style="font-size:18px;line-height:1.1;color:var(--turq);font-weight:700">1 station<br>= 1 mission point</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- [Sources] DJI official product references: https://enterprise.dji.com/dock-3 and https://www.dji.com/media-center/announcements/dji-release-dock-3 ; OpenAI ImageGen: cityvision-guvenli-ucus-koridoru-v1.png -->
+  </div>
+  <div class="foot"><span>City Vision · Safe Operations</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 31 · KURULUM VE İŞLETİM ═══════════ -->
+<section class="slide">
+  <div class="pad">
+    <div class="eyebrow"><i></i>City Vision · Deployment and Operations <span class="n">/ 29</span></div>
+    <h1 class="t">From field evidence to work order, <em>City Vision operates as a supported product.</em> </h1>
+    <p class="lead">Field infrastructure, autonomous missions, AI analysis, municipal operations and technical support are managed continuously within one operating model.</p>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:26px;margin-top:28px">
+      <div style="border:1px solid var(--line)">
+        <div style="padding:20px 22px;border-bottom:1px solid var(--line);background:var(--green-t)"><div class="cap" style="color:var(--green)">Field components</div><h3 style="font-size:17px;margin-top:8px">DJI Dock 3 · Matrice 4TD · authorized flight corridor</h3><p style="font-size:12px;color:var(--ink2);margin-top:7px">Secure site, power, connectivity and mission routes are configured together.</p></div>
+        <div style="padding:20px 22px;border-bottom:1px solid var(--line)"><div class="cap">AI capabilities</div><h3 style="font-size:17px;margin-top:8px">Road · waste/excavation · planning/change · thermal analysis</h3><p style="font-size:12px;color:var(--mut);margin-top:7px">Visual, live and thermal missions are evaluated by a shared confidence engine.</p></div>
+        <div style="padding:20px 22px"><div class="cap">GBSoft platform</div><h3 style="font-size:17px;margin-top:8px">Mission screen · AI queue · map · work order</h3><p style="font-size:12px;color:var(--mut);margin-top:7px">End-to-end flow from flight data to departmental task and closure evidence.</p></div>
+      </div>
+      <div style="border:1px solid var(--line);padding:20px 22px">
+        <div class="cap">Operational standards</div>
+        <div style="margin-top:15px">
+          <div style="display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px">Successful completion of the planned mission</span><strong style="color:var(--green)">Mission success rate</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px">Accurate capture of real findings</span><strong style="color:var(--green)">Detection accuracy</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px">Reduction of false and duplicate records</span><strong style="color:var(--green)">Confidence quality</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px">Time from finding to work order</span><strong style="color:var(--green)">Operational speed</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 0"><span style="font-size:13px">Before-and-after evidence for completed work</span><strong style="color:var(--green)">Municipal impact</strong></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px;border-left:3px solid var(--green);padding:14px 18px;background:var(--paper2);font-size:12.5px;color:var(--ink2)"><strong>Two-layer technical support:</strong> DJI maintains the product, firmware and developer ecosystem; GBSoft acts as the single point of contact for deployment, integration, routes, monitoring and municipal workflow support.</div>
+  </div>
+  <div class="foot"><span>City Vision · Deployment and Operations</span><span class="num"></span></div>
+</section>
+
+<!-- ═══════════ 32 · KAPANIŞ ═══════════ -->
+<section class="slide dark">
+  <img class="bleed" src="img/cityvision-hava-denetimi.png" alt="Aerial city inspection" style="opacity:.30;object-position:50% 18%">
+  <div class="scrim cover"></div>
+  <div class="pad">
+    <div style="position:absolute;left:72px;top:72px;width:650px">
+      <div class="eyebrow" style="margin-bottom:18px">Next Step</div>
+      <h1 class="t" style="font-size:42px;line-height:1.14;color:#fff">Deploy autonomous inspection<br><em>with City Vision</em> in your city.</h1>
+      <p class="lead" style="max-width:590px;margin-top:16px">Secure station, authorized flight corridor, AI detections, GBSoft integration and continuous operational reporting.</p>
+
+      <div style="margin-top:25px;border-top:1px solid rgba(255,255,255,.18)">
+        <div style="display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);align-items:baseline"><span class="serif" style="font-size:15px;color:#67D3C4;width:24px">01</span><span style="font-size:14px;color:#EAF1EC">Site and flight corridor design</span></div>
+        <div style="display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);align-items:baseline"><span class="serif" style="font-size:15px;color:#67D3C4;width:24px">02</span><span style="font-size:14px;color:#EAF1EC">Station deployment, mission plan and safety testing</span></div>
+        <div style="display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);align-items:baseline"><span class="serif" style="font-size:15px;color:#67D3C4;width:24px">03</span><span style="font-size:14px;color:#EAF1EC">GBSoft integration, AI configuration and live missions</span></div>
+        <div style="display:flex;gap:14px;padding:12px 0;align-items:baseline"><span class="serif" style="font-size:15px;color:#67D3C4;width:24px">04</span><span style="font-size:14px;color:#fff;font-weight:600">Continuous operations, reporting and multi-station scaling</span></div>
+      </div>
+
+      <div style="display:flex;gap:46px;margin-top:31px;align-items:flex-start">
+        <div class="mark" style="color:#fff"><svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="#67D3C4" stroke-width="1.6"><rect x="1" y="1" width="30" height="30"/><circle cx="16" cy="16" r="7"/><circle cx="16" cy="16" r="2" fill="#67D3C4" stroke="none"/></svg><span class="wm" style="font-size:12px">GBSOFT</span></div>
+        <div style="font-size:12.5px;line-height:1.7;color:rgba(233,242,236,.8)">info@gbsoftt.com &nbsp;·&nbsp; 0 536 840 92 36<br>Ata-Onenokent, Erzurum &nbsp;·&nbsp; gbsoftt.com</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Thank you</span><span class="num"></span></div>
+</section>
+
+</body>
+</html>

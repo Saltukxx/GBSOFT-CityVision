@@ -1,17 +1,17 @@
 GBSoft City Vision — dikey reel seslendirme metni
 Ses dosyası: public/voiceover-tr.mp3 (ElevenLabs, 58.67 sn)
 
-01  Şehirde her gün sayısız belediye aracı aynı sokaklardan geçiyor.
-02  Bu araçlar artık karşılarına çıkan sorunları da görebiliyor.
-03  City Vision yoldaki çukurları, taşan çöp konteynerlerini ve trafiği aksatan araçları tespit ediyor.
-04  Belediyenin mevcut araçlarına yerleştirilen kameralar yolculuk sırasında çevreyi izliyor.
-05  Toplanan görüntüler araç içerisinde analiz ediliyor.
+01  Drone aynı şehir koridorunu planlı uçuşlarla tekrar tekrar tarıyor.
+02  Her uçuş, görünür belediye sorunlarını konumu ve kanıtıyla kayda dönüştürüyor.
+03  City Vision yol yüzeyi hasarlarını, taşan çöp konteynerlerini ve kaçak döküm alanlarını tespit ediyor.
+04  Sabit rota ve çekim standardı, farklı günlerdeki sonuçları karşılaştırılabilir kılıyor.
+05  Uçuş tamamlandığında görüntüler merkezi yapay zekâ sisteminde analiz ediliyor.
 06  Tespit edilen her sorun konumu ve görüntüsüyle birlikte sisteme kaydediliyor.
-07  Aynı sorun farklı araçlar tarafından yeniden görüldüğünde kayıtlar tek bir olay altında birleştiriliyor.
+07  Aynı sorun tekrarlı uçuşlarda yeniden görüldüğünde kayıtlar tek bir olay altında birleştiriliyor.
 08  Bu sayede aynı sorun için birden fazla iş emri oluşturulmuyor.
 09  Belediye ekipleri doğrudan doğru noktaya yönlendiriliyor.
 10  Bunun için yeni bir ekip kurulmasına gerek kalmıyor.
-11  Mevcut araçlar görevlerini sürdürürken şehir de takip ediliyor.
+11  Planlı drone uçuşları sürerken izinli koridor düzenli olarak takip ediliyor.
 12  Sorunlar büyümeden tespit ediliyor ve ekipler daha hızlı harekete geçiyor.
 13  GBSoft City Vision şehir yönetimini daha hızlı, daha düzenli ve daha verimli hâle getiriyor.
 

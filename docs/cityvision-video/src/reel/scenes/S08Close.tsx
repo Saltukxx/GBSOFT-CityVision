@@ -30,7 +30,7 @@ export const S08Close: React.FC = () => {
       {/* Alt bant: fotoğraf, üst kenarı yumuşak geçişle zemine bağlanıyor */}
       <AbsoluteFill style={{top: PHOTO_TOP, overflow: "hidden"}}>
         <Img
-          src={staticFile("gorseller/09-cityvision-otobus-ana-gorsel.png")}
+          src={staticFile("gorseller/10-cityvision-yol-ana-gorsel.png")}
           style={{
             position: "absolute",
             left: 0,

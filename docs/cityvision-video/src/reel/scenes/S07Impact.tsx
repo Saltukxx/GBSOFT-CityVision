@@ -5,7 +5,7 @@ import {C, FONT, G, inAt, monoLabel} from "../theme";
 import {VO, localOf} from "../timing";
 
 /**
- * Anlatım: "Mevcut araçlar görevlerini sürdürürken şehir de takip ediliyor." +
+ * Anlatım: "Planlı drone uçuşları sürerken izinli koridor düzenli izleniyor." +
  * "Sorunlar büyümeden tespit ediliyor ve ekipler daha hızlı harekete geçiyor."
  */
 
@@ -28,7 +28,7 @@ export const S07Impact: React.FC = () => {
       <ProgressRail index={6} />
 
       <Eyebrow>PİLOT HEDEFLERİ</Eyebrow>
-      <Headline lines={["Araçlar işini yapar,", {t: "şehir taranır.", c: C.accent}]} size={72} delay={5} />
+      <Headline lines={["Drone rotayı tekrarlar,", {t: "değişim görünür.", c: C.accent}]} size={72} delay={5} />
       <SubLine top={452} delay={18} width={860}>
         Güzergâh tekrar ettikçe kapsama büyür; sorun büyümeden kayda geçer.
       </SubLine>
