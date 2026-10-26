@@ -67,6 +67,7 @@ data/raw/roadeye_hf/
 .env
 .env.*
 !.env.example
+belediye-atlas/DEPLOY.md
 
 # Local scratch (unrelated side work, PDF renders)
 .work/
@@ -80,3 +81,26 @@ tools/cvat/
 
 # Local object store (evidence copies)
 data/object_store/
+
+# Separate projects / local envs (not part of this repo)
+.venv-sam3-pilot/
+belediye-atlas/
+GBSoftWebiste.palmier/
+
+# Large public datasets and generated images (download/regenerate locally)
+data/datasets/uav_pdd2023/
+data/datasets/model_b_aerial_synthetic/images/
+
+# Sales material: binaries and confidential business docs (public repo)
+docs/sunum/*.pdf
+docs/sunum/*.pptx
+docs/sunum/*.mp4
+docs/sunum/*.xlsx
+docs/sunum/*.inspect.ndjson
+docs/sunum/img/
+docs/sunum/CityVision-Gorseller/
+*.docx
+outreach-email-pack-*.md
+
+# Large landing media
+src/cityvision/api/static/landing/*.mp4
