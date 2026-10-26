@@ -19,6 +19,9 @@ Guide: `docs/labeling-guide-aerial.md` · Collection: `docs/aerial-data-collecti
 | `clip9` | `17 AGU. PZT 20.30 4. VİDEO .MP4` | 17 Aug 2026 20:30 | 48 | 3840 |
 | `clip10` | `18 Ağustos Salı 2. video` | 18 Aug 2026 | 72 | 1920 |
 | `clip11` | `18 AĞUSTOS SALI 4. video .mp4` | 18 Aug 2026 | 291 | 3840 |
+| `clip22` | `25 Agu 5.MP4` | 25 Aug 2026 | 72 | 3840 |
+| `clip23` | `25 Agu 2 .MP4` | 25 Aug 2026 | 292 | 3840 |
+| `clip24` | `25 Agu 1.MP4` | 25 Aug 2026 | 291 | 3840 |
 
 ### 18 Ağu 2026 oturumu (clip8 / clip9)
 
@@ -49,4 +52,4 @@ Split is clip-based: `clip3` = hold-out test; every other clip is cut on its tim
 Frames listed in `background.txt` export as empty labels (hard negatives), capped at 15% of the train split and spread across clips.
 Train frames holding pothole/road_crack are copied 5x.
 
-export train=1696 val=218 test=69 (bg train=254 val=95 test=42, bg over cap dropped=71, rare copies=876, guard dropped=12) boxes={'pothole': 874, 'road_crack': 2188, 'manhole': 1046, 'road_damage': 1193}
+export train=2976 val=417 test=27 (bg train=446 val=157 test=27, bg over cap dropped=150, rare copies=1436, guard dropped=24, external train added=0) boxes={'pothole': 1549, 'road_crack': 2282, 'road_damage': 3320}

@@ -22,8 +22,8 @@ python scripts/run_pipeline.py \
   --source data/samples/tonkin_highway_15s.mp4 \
   --output outputs/tonkin_memphis_smoke \
   --gps data/samples/tonkin_highway_15s.gps.jsonl \
-  --vehicle-id BUS-TONKIN \
-  --camera-id FRONT
+  --drone-id DJI-LAB-01 \
+  --camera-id AERIAL
 ```
 
 GPS sidecar is **synthetic** (for sync testing only), not real Perth telemetry.
