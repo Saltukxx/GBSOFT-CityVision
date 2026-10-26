@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed pilot fleet, city pack, users, assets for City Vision backend."""
+"""Seed pilot drone, city pack, users, and assets for City Vision backend."""
 
 from __future__ import annotations
 
@@ -69,33 +69,24 @@ def main() -> int:
             props={"pilot": True},
         )
 
-    vehicles = ["BUS-17", "BUS-11", "BUS-7", "BUS-4"]
-    for vid in vehicles:
-        store.upsert_vehicle(vid, name=vid, route_id=route_id, city_id=city_id)
+    drone_ids = ["DJI-DOCK-01"]
+    for drone_id in drone_ids:
+        # The compatibility schema still stores drone assets in vehicles.id.
+        store.upsert_vehicle(drone_id, name=drone_id, route_id=route_id, city_id=city_id)
 
-    store.upsert_camera("FRONT", vehicle_id="BUS-17", label="Ön kamera", facing="front")
-    store.upsert_camera("RIGHT", vehicle_id="BUS-17", label="Sağ kamera", facing="right")
+    store.upsert_camera("AERIAL", vehicle_id="DJI-DOCK-01", label="Drone kamerası", facing="aerial")
 
     store.upsert_user("operator", "Pilot Operatör", role="operator", password_hash=_pw("operator"), city_id=city_id)
     store.upsert_user("admin", "Sistem Yöneticisi", role="admin", password_hash=_pw("admin123"), city_id=city_id)
     store.upsert_user("viewer", "İzleyici", role="viewer", password_hash=_pw("viewer"), city_id=city_id)
 
     store.upsert_asset(
-        "STOP-187",
-        "bus_stop",
-        name="Atatürk Cad. Durak",
-        lat=39.92184,
-        lon=41.27197,
-        zone_id="BUS_STOP_187",
-        city_id=city_id,
-    )
-    store.upsert_asset(
         "BIN-12",
         "bin",
         name="Konteyner 12",
         lat=39.92180,
         lon=41.27195,
-        zone_id="BUS_STOP_187",
+        zone_id=None,
         city_id=city_id,
     )
 
@@ -103,7 +94,7 @@ def main() -> int:
         "city_id": city_id,
         "city_pack": pack_result,
         "route_id": route_id,
-        "vehicles": vehicles,
+        "drone_ids": drone_ids,
         "users": len(store.list_users()),
         "assets": len(store.list_assets()),
     }

@@ -75,7 +75,7 @@
       info.innerHTML = `
         <dl class="kv">
           <dt>Koşu</dt><dd class="id">#${runId}</dd>
-          <dt>Araç</dt><dd>${p.vehicle_id || "—"}</dd>
+          <dt>Drone</dt><dd>${p.vehicle_id || "—"}</dd>
           <dt>Kamera</dt><dd>${p.camera_id || "—"}</dd>
           <dt>Nokta</dt><dd>${coords.length}</dd>
         </dl>
@@ -91,7 +91,7 @@
       const last = latlngs[latlngs.length - 1];
       trackLayer.addLayer(L.circleMarker(last, {
         radius: 8, color: "#eaf0fa", fillColor: "#22d3ee", fillOpacity: 1, weight: 2,
-      }).bindPopup(p.vehicle_id || "araç"));
+      }).bindPopup(p.vehicle_id || "drone"));
       map.fitBounds(line.getBounds().pad(0.2));
     }
 

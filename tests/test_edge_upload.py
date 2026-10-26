@@ -74,7 +74,7 @@ def test_edge_register_upload_ingest(store: Store, tmp_path: Path, monkeypatch, 
             "id": "edge-test-1",
             "name": "Test Edge",
             "city_id": "erzurum",
-            "vehicle_id": "BUS-EDGE",
+            "vehicle_id": "DJI-EDGE",
         },
     )
     assert reg.status_code == 200, reg.text
@@ -99,7 +99,7 @@ def test_edge_register_upload_ingest(store: Store, tmp_path: Path, monkeypatch, 
             "confidence": 0.91,
             "status": "under_review",
             "observations": 1,
-            "vehicle_id": "BUS-EDGE",
+            "vehicle_id": "DJI-EDGE",
         }
     ]
     ok = client.post(

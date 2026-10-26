@@ -92,8 +92,8 @@ def test_run_track_and_annotated(tmp_path: Path):
                     "observations": 1,
                     "severity": "medium",
                     "status": "under_review",
-                    "vehicle_ids": ["BUS-DEMO"],
-                    "vehicle_id": "BUS-DEMO",
+                    "vehicle_ids": ["DJI-DEMO"],
+                    "vehicle_id": "DJI-DEMO",
                     "city_id": city_id,
                 }
             ]
@@ -101,7 +101,7 @@ def test_run_track_and_annotated(tmp_path: Path):
         encoding="utf-8",
     )
     (run / "summary.json").write_text(
-        json.dumps({"vehicle_id": "BUS-DEMO", "camera_id": "FRONT", "city_id": city_id}),
+        json.dumps({"vehicle_id": "DJI-DEMO", "camera_id": "AERIAL", "city_id": city_id}),
         encoding="utf-8",
     )
     _tiny_mp4(run / "annotated.mp4")
@@ -120,7 +120,7 @@ def test_run_track_and_annotated(tmp_path: Path):
     body = geo.json()
     assert body["geometry"]["type"] == "LineString"
     assert len(body["geometry"]["coordinates"]) > 1
-    assert body["properties"]["vehicle_id"] == "BUS-DEMO"
+    assert body["properties"]["vehicle_id"] == "DJI-DEMO"
 
     video = client.get(f"/api/runs/{run_id}/annotated")
     assert video.status_code == 200

@@ -48,7 +48,7 @@ def event_with_media(tmp_path, monkeypatch):
                     "observations": 2,
                     "severity": "medium",
                     "status": "under_review",
-                    "vehicle_id": "BUS-MEDIA",
+                    "vehicle_id": "DJI-MEDIA",
                     "first_seen_ms": 1000,
                     "last_seen_ms": 2000,
                 }
@@ -57,7 +57,7 @@ def event_with_media(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     (run_dir / "summary.json").write_text(
-        json.dumps({"vehicle_id": "BUS-MEDIA", "camera_id": "FRONT"}), encoding="utf-8"
+        json.dumps({"vehicle_id": "DJI-MEDIA", "camera_id": "AERIAL"}), encoding="utf-8"
     )
 
     store = Store()

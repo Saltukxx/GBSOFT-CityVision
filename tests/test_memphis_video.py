@@ -39,7 +39,7 @@ def _register(client: TestClient, device_id: str | None = None) -> str:
             "id": device_id,
             "name": "Memphis Lab",
             "city_id": "erzurum",
-            "vehicle_id": "BUS-MEM",
+            "vehicle_id": "DJI-MEM",
         },
     )
     assert reg.status_code == 200, reg.text

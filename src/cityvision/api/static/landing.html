@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CITYVISION — İstanbul Boğazı Drone Operasyonu</title>
+  <meta name="description" content="CITYVISION: İstanbul Boğazı'na bakan çatıda DJI Dock 3'ten kalkışa geçen DJI Matrice 4TD ile otonom şehir gözlemi." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+  <link rel="preload" as="image" href="/static/landing/hero-poster.jpg" />
+  <link rel="preload" as="video" href="/static/landing/hero-sequence.mp4" />
+  <style>
+    :root {
+      --bg: #0a0f16;
+      --panel: #121a24;
+      --text: #e8eef4;
+      --muted: #93a3b5;
+      --accent: #3d9cf0;
+      --warm: #f0b96b;
+      --line: #24313f;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* ---------- Loader ---------- */
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: var(--bg) url("/static/landing/hero-poster.jpg") center / cover no-repeat;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-start;
+      transition: opacity 0.6s ease;
+    }
+    #loader::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(10, 15, 22, 0.25) 0%, rgba(10, 15, 22, 0.75) 100%);
+    }
+    #loader .loader-label {
+      position: relative;
+      z-index: 1;
+      margin: 0 0 2.2rem 2rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+
+    /* ---------- Top nav ---------- */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.1rem 1.5rem;
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .top-nav .brand {
+      pointer-events: auto;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .top-nav a {
+      pointer-events: auto;
+      color: var(--muted);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      padding: 0.4rem 0.85rem;
+      background: rgba(18, 26, 36, 0.55);
+      backdrop-filter: blur(6px);
+    }
+    .top-nav a:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ---------- Pinned scene ---------- */
+    .scene-pin {
+      position: relative;
+      height: 1100vh;
+    }
+    .stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: #060a10;
+      perspective: 1400px;
+    }
+    /* The video sits in its own 3D card so the pointer-tilt script can give
+       it depth against the page, even though it's a single flat plane. */
+    .video-frame {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .hero-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: right center;
+      transform: scale(1.06); /* headroom so the pointer-tilt never reveals an edge */
+      background: #060a10;
+    }
+    .stage-scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(6, 10, 16, 0.92) 0%, rgba(6, 10, 16, 0.5) 38%, rgba(6, 10, 16, 0.05) 62%);
+    }
+    /* Handoff out of the pinned scene: fades to a flat color that matches
+       next-teaser's top gradient stop, so the pin release reads as one
+       continuous crossfade instead of a hard cut into the next section. */
+    .stage-out {
+      position: absolute;
+      inset: 0;
+      background: #060a10;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .copy-stack {
+      position: absolute;
+      left: 6vw;
+      top: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      max-width: min(46vw, 560px);
+      z-index: 2;
+    }
+    .copy-step {
+      position: absolute;
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    .copy-step .eyebrow {
+      display: block;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.9rem;
+    }
+    .copy-step h2 {
+      margin: 0 0 0.9rem;
+      font-size: clamp(1.7rem, 3.4vw, 2.6rem);
+      font-weight: 600;
+      line-height: 1.15;
+    }
+    .copy-step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(0.95rem, 1.2vw, 1.05rem);
+      line-height: 1.6;
+      max-width: 42ch;
+    }
+
+    /* Progress rail: five ticks, one per scene, filled as the scene-pin scrubs. */
+    .progress-rail {
+      position: absolute;
+      left: 6vw;
+      bottom: 3rem;
+      z-index: 2;
+      display: flex;
+      gap: 0.4rem;
+    }
+    .progress-rail .tick {
+      width: 28px;
+      height: 3px;
+      background: rgba(147, 163, 181, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-rail .tick .fill {
+      position: absolute;
+      inset: 0;
+      width: 0%;
+      background: var(--accent);
+    }
+    .scroll-hint {
+      position: absolute;
+      left: 6vw;
+      bottom: 4rem;
+      z-index: 2;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      opacity: 0.8;
+      transition: opacity 0.4s ease;
+    }
+
+    /* ---------- Teaser / next section ---------- */
+    .next-teaser {
+      position: relative;
+      min-height: 70vh;
+      display: flex;
+      align-items: center;
+      padding: 4rem 6vw;
+      background: linear-gradient(180deg, #060a10 0%, #0a0f16 100%);
+      border-top: 1px solid var(--line);
+    }
+    .next-teaser .inner { max-width: 640px; }
+    .next-teaser .eyebrow {
+      display: block;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--warm);
+      margin-bottom: 0.9rem;
+    }
+    .next-teaser h3 {
+      margin: 0 0 1rem;
+      font-size: clamp(1.4rem, 2.6vw, 2rem);
+      font-weight: 600;
+    }
+    .next-teaser p {
+      margin: 0 0 1.75rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 56ch;
+    }
+    .next-teaser .cta {
+      display: inline-block;
+      color: var(--bg);
+      background: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.75rem 1.4rem;
+    }
+    .next-teaser .cta:hover { background: #5cb0f5; }
+
+    footer.note {
+      padding: 1.5rem 6vw 2.5rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-family: "IBM Plex Mono", monospace;
+      background: #0a0f16;
+    }
+
+    /* ---------- Mobile ---------- */
+    @media (max-width: 820px) {
+      .scene-pin { height: 840vh; }
+      .stage { perspective: 900px; }
+      .stage-scrim { background: linear-gradient(180deg, rgba(6, 10, 16, 0.35) 0%, rgba(6, 10, 16, 0.92) 68%); }
+      .hero-video { object-position: 62% center; }
+      .copy-stack {
+        left: 0;
+        right: 0;
+        max-width: none;
+        top: auto;
+        bottom: 3.5rem;
+        height: auto;
+        padding: 0 5vw;
+      }
+      .copy-step p { max-width: 100%; }
+      .progress-rail, .scroll-hint { left: 5vw; }
+      .scroll-hint { bottom: 1rem; }
+      .progress-rail { bottom: 1rem; opacity: 0; } /* rail sits under the copy on mobile; hide to avoid overlap */
+    }
+
+    /* ---------- Reduced motion ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      .scene-pin { height: auto; }
+      .stage { position: relative; height: 78vh; perspective: none; }
+      .hero-video { transform: none; }
+      .copy-step { position: static; opacity: 1; transform: none; margin-bottom: 2rem; }
+      .copy-step:not(:first-child) { display: none; }
+      .progress-rail, .scroll-hint { display: none; }
+      .stage-out { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loader" aria-hidden="true">
+    <span class="loader-label">CITYVISION · yükleniyor…</span>
+  </div>
+
+  <nav class="top-nav">
+    <span class="brand">CITYVISION</span>
+    <a href="/map">Operatör paneline git →</a>
+  </nav>
+
+  <main>
+    <section class="scene-pin" id="scenePin">
+      <div class="stage" id="stage">
+        <div class="video-frame" id="videoFrame">
+          <video
+            class="hero-video"
+            id="heroVideo"
+            src="/static/landing/hero-sequence.mp4"
+            poster="/static/landing/hero-poster.jpg"
+            muted
+            playsinline
+            preload="auto"
+          ></video>
+          <div class="stage-scrim"></div>
+        </div>
+        <div class="stage-out" id="stageOut"></div>
+
+        <div class="copy-stack">
+          <div class="copy-step" data-step="0">
+            <span class="eyebrow">01 · Kapak Açılıyor</span>
+            <h2>İstanbul Boğazı'nda Sürekli Gözlem</h2>
+            <p>DJI Dock 3 açılıyor — Matrice 4TD, Boğaz'a bakan çatıda kalkışa hazır bekliyor.</p>
+          </div>
+          <div class="copy-step" data-step="1">
+            <span class="eyebrow">02 · Kalkış</span>
+            <h2>Dikey ve Kontrollü Kalkış</h2>
+            <p>Pervaneler dönmeye başlıyor, drone platformdan ayrılıp hover'a geçiyor.</p>
+          </div>
+          <div class="copy-step" data-step="2">
+            <span class="eyebrow">03 · Göreve Çıkış</span>
+            <h2>Planlı Koridor Uçuşu</h2>
+            <p>Drone, belirlenen rotada şehir üzerinde göreve çıkıyor.</p>
+          </div>
+          <div class="copy-step" data-step="3">
+            <span class="eyebrow">04 · Alçalış</span>
+            <h2>Hedef Sokağa Alçalıyor</h2>
+            <p>Rota üzerindeki sokağa yaklaşırken irtifa kaybediyor.</p>
+          </div>
+          <div class="copy-step" data-step="4">
+            <span class="eyebrow">05 · Tarama</span>
+            <h2>Yol Yüzeyini Tarıyor</h2>
+            <p>Sabit sörvey irtifasından asfalttaki çatlak ve çukurlar taranıyor.</p>
+          </div>
+          <div class="copy-step" data-step="5">
+            <span class="eyebrow">06 · Dönüş</span>
+            <h2>Göreve Devam İçin Yükseliyor</h2>
+            <p>Tarama tamamlanınca drone tekrar irtifa kazanıp dock'a yöneliyor.</p>
+          </div>
+          <div class="copy-step" data-step="6">
+            <span class="eyebrow">07 · İniş</span>
+            <h2>Dock'a Güvenli İniş</h2>
+            <p>Drone platforma iniyor, görev tamamlanıyor.</p>
+          </div>
+        </div>
+
+        <div class="progress-rail" id="progressRail">
+          <div class="tick"><div class="fill"></div></div>
+          <div class="tick"><div class="fill"></div></div>
+          <div class="tick"><div class="fill"></div></div>
+          <div class="tick"><div class="fill"></div></div>
+          <div class="tick"><div class="fill"></div></div>
+          <div class="tick"><div class="fill"></div></div>
+          <div class="tick"><div class="fill"></div></div>
+        </div>
+        <div class="scroll-hint" id="scrollHint">kaydır ↓</div>
+      </div>
+    </section>
+
+    <section class="next-teaser">
+      <div class="inner">
+        <span class="eyebrow">Konsept Tamamlandı</span>
+        <h3>Bu Bir Görselleştirme, Gerçek Operasyon Ayrı</h3>
+        <p>
+          Yukarıdaki uçuş dizisi yapay zeka ile üretilmiş bir konsept çalışmasıdır — gerçek görüntü değildir.
+          CITYVISION'ın gerçek tespit verileri, aşağıdaki canlı operasyon panelinde görüntülenir.
+        </p>
+        <a class="cta" href="/map">Canlı operasyon panelini gör</a>
+      </div>
+    </section>
+
+    <footer class="note">
+      Konsept görsel/video · DJI Matrice 4TD ve DJI Dock 3 referans alınmıştır, mekanik detaylar doğrulanmamıştır.
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://unpkg.com/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var loader = document.getElementById("loader");
+      var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var video = document.getElementById("heroVideo");
+
+      function hideLoader() {
+        if (!loader) return;
+        loader.classList.add("hidden");
+        setTimeout(function () { loader.remove(); }, 700);
+      }
+
+      // Reveal once the video can play through, or after a timeout so a
+      // slow/broken asset never leaves the loader stuck forever.
+      var revealed = false;
+      function reveal() {
+        if (revealed) return;
+        revealed = true;
+        hideLoader();
+      }
+      video.addEventListener("loadeddata", reveal, { once: true });
+      video.addEventListener("error", reveal, { once: true });
+      setTimeout(reveal, 4500);
+
+      // iOS Safari only allows programmatic currentTime scrubbing after a
+      // real play() has happened once. Prime it on the first touch/scroll.
+      var primed = false;
+      function primeVideo() {
+        if (primed) return;
+        primed = true;
+        var p = video.play();
+        if (p && p.then) p.then(function () { video.pause(); }).catch(function () {});
+      }
+      window.addEventListener("touchstart", primeVideo, { once: true, passive: true });
+      window.addEventListener("wheel", primeVideo, { once: true, passive: true });
+      window.addEventListener("scroll", primeVideo, { once: true, passive: true });
+
+      if (reduceMotion || !window.gsap || !window.ScrollTrigger) {
+        return; // Static fallback: CSS shows the poster frame, no scrubbing.
+      }
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      var stage = document.getElementById("stage");
+      var videoFrame = document.getElementById("videoFrame");
+      var scrollHint = document.getElementById("scrollHint");
+      var stageOut = document.getElementById("stageOut");
+      var steps = gsap.utils.toArray(".copy-step");
+      var ticks = gsap.utils.toArray("#progressRail .tick .fill");
+
+      // Scene boundaries in the 40s export, as fractions of total duration.
+      // [0,6]=dock opening [6,12]=liftoff+hover [12,18]=mission flight
+      // [18,24]=descend into street [24,28]=scanning [28,34]=return transit
+      // [34,40]=final landing.
+      var SCENE_DURATION = 40;
+      var bounds = [0, 6, 12, 18, 24, 28, 34, 40].map(function (s) { return s / SCENE_DURATION; });
+
+      gsap.set(steps, { opacity: 0, y: 14 });
+      gsap.set(steps[0], { opacity: 1, y: 0 });
+
+      function setupScrub() {
+        var duration = video.duration || SCENE_DURATION;
+
+        var tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: "#scenePin",
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 0.9,
+            onUpdate: function (self) {
+              if (scrollHint) scrollHint.style.opacity = self.progress < 0.03 ? 0.8 : 0;
+              ticks.forEach(function (fill, i) {
+                var segStart = i / ticks.length;
+                var segEnd = (i + 1) / ticks.length;
+                var local = (self.progress - segStart) / (segEnd - segStart);
+                fill.style.width = Math.max(0, Math.min(1, local)) * 100 + "%";
+              });
+            },
+          },
+        });
+
+        // Drive the video's playhead directly off scroll progress.
+        tl.to(video, { currentTime: duration, ease: "none", duration: 1 }, 0);
+
+        // Crossfade the five caption stages at each scene boundary.
+        for (var i = 1; i < steps.length; i++) {
+          var t = bounds[i];
+          tl.to(steps[i - 1], { opacity: 0, y: -14, duration: 0.05 }, t - 0.025);
+          tl.to(steps[i], { opacity: 1, y: 0, duration: 0.05 }, t + 0.005);
+        }
+
+        // Handoff (last ~10%): dissolve to next-teaser's own background so
+        // the pin release reads as a crossfade, not a hard cut.
+        tl.to(steps[steps.length - 1], { opacity: 0, y: -10, duration: 0.05 }, 0.92)
+          .to(stageOut, { opacity: 1, duration: 0.08, ease: "power1.in" }, 0.92);
+      }
+
+      if (video.readyState >= 1) {
+        setupScrub();
+      } else {
+        video.addEventListener("loadedmetadata", setupScrub, { once: true });
+      }
+
+      // Subtle pointer-parallax tilt on the video plane — desktop/precise
+      // pointer only, so touch scrolling never fights a tilt.
+      var canTilt = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      if (canTilt && videoFrame && stage) {
+        var tiltX = gsap.quickTo(videoFrame, "rotateX", { duration: 0.7, ease: "power3.out" });
+        var tiltY = gsap.quickTo(videoFrame, "rotateY", { duration: 0.7, ease: "power3.out" });
+        stage.addEventListener("pointermove", function (e) {
+          var r = stage.getBoundingClientRect();
+          var nx = (e.clientX - r.left) / r.width - 0.5;
+          var ny = (e.clientY - r.top) / r.height - 0.5;
+          tiltX(ny * -5);
+          tiltY(nx * 6);
+        });
+        stage.addEventListener("pointerleave", function () {
+          tiltX(0);
+          tiltY(0);
+        });
+      }
+
+      // Next-teaser entrance: fades/rises in as it's scrolled into view.
+      var teaserInner = document.querySelector(".next-teaser .inner");
+      if (teaserInner) {
+        gsap.set(teaserInner, { opacity: 0, y: 24 });
+        gsap.to(teaserInner, {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: ".next-teaser",
+            start: "top 85%",
+            toggleActions: "play none none reverse",
+          },
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

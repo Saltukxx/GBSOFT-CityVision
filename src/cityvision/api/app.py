@@ -59,6 +59,11 @@ def _static_html(name: str) -> HTMLResponse:
     return HTMLResponse(path.read_text(encoding="utf-8"))
 
 
+@app.get("/landing", response_class=HTMLResponse)
+def page_landing() -> HTMLResponse:
+    return _static_html("landing.html")
+
+
 @app.get("/map", response_class=HTMLResponse)
 def page_map() -> HTMLResponse:
     return _static_html("map.html")

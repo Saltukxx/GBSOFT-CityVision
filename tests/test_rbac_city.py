@@ -51,14 +51,14 @@ def test_city_id_on_ingest_and_filter(store: Store, tmp_path: Path, monkeypatch)
                     "confidence": 0.9,
                     "status": "under_review",
                     "observations": 1,
-                    "vehicle_id": "BUS-C",
+                    "vehicle_id": "DJI-C",
                 }
             ]
         ),
         encoding="utf-8",
     )
     (run / "summary.json").write_text(
-        json.dumps({"city_id": "erzurum", "vehicle_id": "BUS-C"}),
+        json.dumps({"city_id": "erzurum", "vehicle_id": "DJI-C"}),
         encoding="utf-8",
     )
     ingest_run_dir(run, store=store)

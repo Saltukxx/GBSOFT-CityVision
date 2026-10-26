@@ -15,7 +15,6 @@ import numpy as np
 
 from cityvision.events.engine import EventEngine
 from cityvision.events.evidence import write_evidence_packs
-from cityvision.geo.geofence import GeofenceEngine, load_zones
 from cityvision.pipeline.annotate import draw_detections
 from cityvision.pipeline.export_json import JsonlWriter
 from cityvision.pipeline.types import Detection, RunMeta
@@ -55,7 +54,7 @@ def _write_annotated(src: Path, dest: Path, dets: list[Detection], frames: int, 
         if not ok:
             break
         shown = by_frame.get(i, [])
-        hud = [f"BUS-7/FRONT  f={i}", f"dets={len(shown)}"]
+        hud = [f"DJI-01/AERIAL  f={i}", f"dets={len(shown)}"]
         writer.write(draw_detections(frame, shown, hud_lines=hud))
     writer.release()
     cap.release()
@@ -71,31 +70,13 @@ def main() -> int:
 
     trail = _trail(48)
     dets: list[Detection] = []
-    for i, (lat, lon) in enumerate(trail):
-        dets.append(
-            Detection(
-                i,
-                (i / fps) * 1000.0,
-                "car",
-                0.92,
-                (100, 180, 220, 300),
-                track_id=9,
-                lat=lat,
-                lon=lon,
-                vehicle_id="BUS-7",
-                camera_id="FRONT",
-            )
-        )
     pit_lat, pit_lon = trail[20]
     dets.extend(
         [
-            Detection(10, 666, "pothole", 0.91, (200, 300, 280, 360), track_id=1, lat=pit_lat, lon=pit_lon, vehicle_id="BUS-4", camera_id="FRONT"),
-            Detection(20, 1333, "pothole", 0.89, (205, 302, 285, 362), track_id=2, lat=pit_lat + 0.00002, lon=pit_lon - 0.00002, vehicle_id="BUS-7", camera_id="FRONT"),
-            Detection(30, 2000, "pothole", 0.93, (198, 298, 278, 358), track_id=3, lat=pit_lat - 0.00001, lon=pit_lon + 0.00001, vehicle_id="BUS-11", camera_id="FRONT"),
-            Detection(40, 2666, "street_waste", 0.84, (400, 200, 480, 280), track_id=4, lat=39.92180, lon=41.27195, vehicle_id="BUS-7", camera_id="RIGHT"),
-            Detection(45, 3000, "car", 0.95, (100, 180, 220, 300), track_id=9, lat=39.92182, lon=41.27195, vehicle_id="BUS-7", camera_id="RIGHT"),
-            Detection(46, 3066, "car", 0.94, (100, 180, 220, 300), track_id=9, lat=39.92183, lon=41.27196, vehicle_id="BUS-7", camera_id="RIGHT"),
-            Detection(47, 3133, "car", 0.96, (100, 180, 220, 300), track_id=9, lat=39.92184, lon=41.27197, vehicle_id="BUS-7", camera_id="RIGHT"),
+            Detection(10, 666, "pothole", 0.91, (200, 300, 280, 360), track_id=1, lat=pit_lat, lon=pit_lon, vehicle_id="DJI-01", camera_id="AERIAL"),
+            Detection(20, 1333, "pothole", 0.89, (205, 302, 285, 362), track_id=2, lat=pit_lat + 0.00002, lon=pit_lon - 0.00002, vehicle_id="DJI-01", camera_id="AERIAL"),
+            Detection(30, 2000, "pothole", 0.93, (198, 298, 278, 358), track_id=3, lat=pit_lat - 0.00001, lon=pit_lon + 0.00001, vehicle_id="DJI-01", camera_id="AERIAL"),
+            Detection(40, 2666, "street_waste", 0.84, (400, 200, 480, 280), track_id=4, lat=39.92180, lon=41.27195, vehicle_id="DJI-01", camera_id="AERIAL"),
         ]
     )
 
@@ -115,13 +96,7 @@ def main() -> int:
     engine = EventEngine(events_cfg, conf_cfg, model_version="simulate-0.2.0")
     engine.ingest(dets)
 
-    geo = GeofenceEngine(
-        zones=load_zones(ROOT / "configs" / "zones.example.geojson"),
-        vehicle_classes=["car", "bus", "truck", "motorcycle"],
-        min_dwell_frames=3,
-    )
-    geo.update(dets)
-    events = engine.build(640, 480, geofence_hits=geo.finalized_hits())
+    events = engine.build(640, 480)
     events = write_evidence_packs(video, events, out, fps=fps, max_events=20, draw_boxes=True)
 
     event_dicts = [e.to_dict() for e in events]
@@ -131,11 +106,11 @@ def main() -> int:
     summary = {
         "detections": len(dets),
         "events": len(events),
-        "unique_tracks": 5,
+        "unique_tracks": 4,
         "review_queue": sum(1 for e in events if e.confidence_band == "manual_review"),
         "note": "offline simulation (no YOLO)",
-        "vehicle_id": "BUS-7",
-        "camera_id": "FRONT",
+        "vehicle_id": "DJI-01",
+        "camera_id": "AERIAL",
         "city_id": "erzurum",
         "source": str(video),
         "model_a": "simulated",
@@ -150,8 +125,8 @@ def main() -> int:
         width=640,
         height=480,
         frame_count=frames,
-        vehicle_id="BUS-7",
-        camera_id="FRONT",
+        vehicle_id="DJI-01",
+        camera_id="AERIAL",
     )
     writer = JsonlWriter(out / "detections.jsonl")
     writer.open()
@@ -167,7 +142,7 @@ def main() -> int:
         meta.to_dict(),
         summary,
         event_dicts,
-        traffic={"vehicles_per_minute": 12.5},
+        traffic={},
     )
     print(f"Simulated events → {out.resolve()}")
     print(json.dumps(summary, indent=2))

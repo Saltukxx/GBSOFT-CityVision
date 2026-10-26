@@ -42,8 +42,8 @@ def _bound_device_city(device: dict[str, Any], requested: Optional[str]) -> str:
 
 
 class EdgeDeviceCreate(BaseModel):
-    id: str = Field(..., min_length=2, max_length=64, examples=["edge-bus-17"])
-    name: str = Field(..., examples=["BUS-17 Jetson"])
+    id: str = Field(..., min_length=2, max_length=64, examples=["dock-dji-01"])
+    name: str = Field(..., examples=["DJI-DOCK-01"])
     city_id: Optional[str] = None
     vehicle_id: Optional[str] = None
 

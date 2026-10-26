@@ -142,7 +142,7 @@ def main() -> int:
     pull = sub.add_parser("pull", help="download media + trajectory and queue analysis")
     pull.add_argument("task_uuid", nargs="?", help="omit to pull all completed tasks")
     pull.add_argument("--city", default=None, help="city id (default: CITYVISION_DEFAULT_CITY)")
-    pull.add_argument("--vehicle", default=None, help="existing vehicles.id to attribute the run to")
+    pull.add_argument("--vehicle", default=None, help="deprecated schema field for the drone / Dock asset id")
     pull.add_argument("--limit", type=int, default=None, help="max tasks when pulling all")
     pull.add_argument(
         "--any-status",

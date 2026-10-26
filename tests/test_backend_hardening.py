@@ -64,8 +64,8 @@ def test_merge_reingest_is_idempotent(store: Store, tmp_path: Path):
     lat, lon = 39.91101, 41.31101
     run_a = tmp_path / "ida"
     run_b = tmp_path / "idb"
-    _write_run(run_a, "POT-IDEM-A", lat, lon, "BUS-X")
-    _write_run(run_b, "POT-IDEM-B", lat + 0.00001, lon + 0.00001, "BUS-Y")
+    _write_run(run_a, "POT-IDEM-A", lat, lon, "DJI-X")
+    _write_run(run_b, "POT-IDEM-B", lat + 0.00001, lon + 0.00001, "DJI-Y")
 
     ingest_run_dir(run_a, store=store)
     r2 = ingest_run_dir(run_b, store=store)
@@ -85,7 +85,7 @@ def test_merge_reingest_is_idempotent(store: Store, tmp_path: Path):
 def test_operator_status_preserved_on_reingest(store: Store, tmp_path: Path):
     lat, lon = 39.91202, 41.31202
     run = tmp_path / "status_run"
-    _write_run(run, "POT-STATUS-1", lat, lon, "BUS-S")
+    _write_run(run, "POT-STATUS-1", lat, lon, "DJI-S")
     ingest_run_dir(run, store=store)
     assert store.update_event_status("POT-STATUS-1", "confirmed", actor="pytest")
 
@@ -118,7 +118,7 @@ def test_status_enum_rejects_invalid(store: Store):
 
 def test_job_claim_is_single_winner(store: Store, tmp_path: Path):
     run = tmp_path / "job_run"
-    _write_run(run, "POT-JOB-1", 39.91303, 41.31303, "BUS-J")
+    _write_run(run, "POT-JOB-1", 39.91303, 41.31303, "DJI-J")
     job_id = store.create_job("ingest_run", {"run_dir": str(run)})
     assert store.claim_job(job_id) is True
     assert store.claim_job(job_id) is False
@@ -128,7 +128,7 @@ def test_job_claim_is_single_winner(store: Store, tmp_path: Path):
 
 def test_enqueue_dedupes_active_ingest(store: Store, tmp_path: Path):
     run = tmp_path / "dedupe_run"
-    _write_run(run, "POT-DEDUP-1", 39.91404, 41.31404, "BUS-D")
+    _write_run(run, "POT-DEDUP-1", 39.91404, 41.31404, "DJI-D")
     # Create a queued job without starting a worker thread
     j1 = store.create_job("ingest_run", {"run_dir": str(run)})
     active = store.find_active_job("ingest_run", run_dir=str(run))

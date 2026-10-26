@@ -72,8 +72,8 @@ def test_spatial_merge_across_runs(store: Store, tmp_path: Path):
                     "observations": 1,
                     "severity": "medium",
                     "status": "under_review",
-                    "vehicle_ids": ["BUS-A"],
-                    "vehicle_id": "BUS-A",
+                    "vehicle_ids": ["DJI-A"],
+                    "vehicle_id": "DJI-A",
                     "city_id": city_id,
                     "first_seen_ms": 1000,
                     "last_seen_ms": 1500,
@@ -83,7 +83,7 @@ def test_spatial_merge_across_runs(store: Store, tmp_path: Path):
         encoding="utf-8",
     )
     (run_a / "summary.json").write_text(
-        json.dumps({"vehicle_id": "BUS-A", "camera_id": "FRONT", "city_id": city_id}),
+        json.dumps({"vehicle_id": "DJI-A", "camera_id": "AERIAL", "city_id": city_id}),
         encoding="utf-8",
     )
 
@@ -100,8 +100,8 @@ def test_spatial_merge_across_runs(store: Store, tmp_path: Path):
                     "observations": 1,
                     "severity": "medium",
                     "status": "under_review",
-                    "vehicle_ids": ["BUS-B"],
-                    "vehicle_id": "BUS-B",
+                    "vehicle_ids": ["DJI-B"],
+                    "vehicle_id": "DJI-B",
                     "city_id": city_id,
                     "first_seen_ms": 2000,
                     "last_seen_ms": 2500,
@@ -111,7 +111,7 @@ def test_spatial_merge_across_runs(store: Store, tmp_path: Path):
         encoding="utf-8",
     )
     (run_b / "summary.json").write_text(
-        json.dumps({"vehicle_id": "BUS-B", "camera_id": "FRONT", "city_id": city_id}),
+        json.dumps({"vehicle_id": "DJI-B", "camera_id": "AERIAL", "city_id": city_id}),
         encoding="utf-8",
     )
 
@@ -131,7 +131,7 @@ def test_spatial_merge_across_runs(store: Store, tmp_path: Path):
     payload = merged.get("payload") or {}
     assert id_b in (payload.get("merged_from") or [])
     vids = payload.get("vehicle_ids") or []
-    assert "BUS-A" in vids and "BUS-B" in vids
+    assert "DJI-A" in vids and "DJI-B" in vids
 
 
 def test_api_smoke_health_review_export(store: Store):

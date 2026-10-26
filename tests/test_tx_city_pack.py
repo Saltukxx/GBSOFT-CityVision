@@ -62,14 +62,14 @@ def test_transactional_ingest_commits(store: Store, tmp_path: Path):
                     "confidence": 0.9,
                     "status": "under_review",
                     "observations": 1,
-                    "vehicle_id": "BUS-TX",
+                    "vehicle_id": "DJI-TX",
                 }
             ]
         ),
         encoding="utf-8",
     )
     (run / "summary.json").write_text(
-        json.dumps({"vehicle_id": "BUS-TX", "city_id": "erzurum"}),
+        json.dumps({"vehicle_id": "DJI-TX", "city_id": "erzurum"}),
         encoding="utf-8",
     )
     r = ingest_run_dir(run, store=store)
@@ -92,14 +92,14 @@ def test_transaction_rolls_back_on_error(store: Store, tmp_path: Path, monkeypat
                     "confidence": 0.9,
                     "status": "under_review",
                     "observations": 1,
-                    "vehicle_id": "BUS-TXF",
+                    "vehicle_id": "DJI-TXF",
                 }
             ]
         ),
         encoding="utf-8",
     )
     (run / "summary.json").write_text(
-        json.dumps({"vehicle_id": "BUS-TXF", "city_id": "erzurum"}),
+        json.dumps({"vehicle_id": "DJI-TXF", "city_id": "erzurum"}),
         encoding="utf-8",
     )
 

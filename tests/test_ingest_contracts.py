@@ -89,13 +89,13 @@ def test_ingest_contract_city_merge_status_tx(store: Store, tmp_path: Path):
 
     run_a = tmp_path / "a"
     run_b = tmp_path / "b"
-    _write_run(run_a, event_id=id_a, lat=lat, lon=lon, vehicle="BUS-E2E-A", city_id=city_id)
+    _write_run(run_a, event_id=id_a, lat=lat, lon=lon, vehicle="DJI-E2E-A", city_id=city_id)
     _write_run(
         run_b,
         event_id=id_b,
         lat=lat + 0.00001,
         lon=lon + 0.00001,
-        vehicle="BUS-E2E-B",
+        vehicle="DJI-E2E-B",
         city_id=city_id,
     )
 
@@ -119,8 +119,8 @@ def test_ingest_contract_city_merge_status_tx(store: Store, tmp_path: Path):
     assert store.get_event(id_b) is None
     payload = merged.get("payload") or {}
     assert id_b in (payload.get("merged_from") or [])
-    assert "BUS-E2E-A" in (payload.get("vehicle_ids") or [])
-    assert "BUS-E2E-B" in (payload.get("vehicle_ids") or [])
+    assert "DJI-E2E-A" in (payload.get("vehicle_ids") or [])
+    assert "DJI-E2E-B" in (payload.get("vehicle_ids") or [])
 
     # Re-ingest B is idempotent
     r3 = ingest_run_dir(run_b, store=store)
@@ -136,7 +136,7 @@ def test_ingest_contract_city_merge_status_tx(store: Store, tmp_path: Path):
         event_id=id_a,
         lat=lat,
         lon=lon,
-        vehicle="BUS-E2E-A",
+        vehicle="DJI-E2E-A",
         city_id=city_id,
         status="under_review",
         observations=1,

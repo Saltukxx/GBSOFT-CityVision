@@ -104,12 +104,12 @@ def _seed_two_cities(store: Store) -> dict:
     store.upsert_city(city_b, f"City B {suffix}")
     run_a = store.upsert_run(
         f"/tmp/mt-a-{suffix}",
-        {"city_id": city_a, "vehicle_id": "BUS-A"},
+        {"city_id": city_a, "vehicle_id": "DJI-A"},
         {},
     )
     run_b = store.upsert_run(
         f"/tmp/mt-b-{suffix}",
-        {"city_id": city_b, "vehicle_id": "BUS-B"},
+        {"city_id": city_b, "vehicle_id": "DJI-B"},
         {},
     )
     eid_a = f"POT-A-{suffix}"
@@ -394,4 +394,3 @@ def test_username_reserved_and_collision(store: Store, monkeypatch):
         headers=hdr,
     )
     assert collision.status_code == 409
-

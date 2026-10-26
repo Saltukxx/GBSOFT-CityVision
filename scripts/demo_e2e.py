@@ -46,14 +46,14 @@ def _write_cross_run(src: Path, dest: Path) -> Path:
         if not isinstance(ev, dict):
             continue
         old = str(ev.get("event_id") or f"EVT-{i}")
-        # Keep type/coords; change id + add another vehicle sighting
+        # Keep type/coords; change id + add a repeated-flight observation
         prefix = old.split("-")[0] if "-" in old else "EVT"
         ev["event_id"] = f"{prefix}-X{i+1:04d}"
         vids = list(ev.get("vehicle_ids") or [])
-        if "BUS-17" not in vids:
-            vids.append("BUS-17")
+        if "DJI-DOCK-02" not in vids:
+            vids.append("DJI-DOCK-02")
         ev["vehicle_ids"] = vids
-        ev["vehicle_id"] = "BUS-17"
+        ev["vehicle_id"] = "DJI-DOCK-02"
         ev["observations"] = int(ev.get("observations") or 1)
         # Point evidence at clone dir if present
         ed = ev.get("evidence_dir")
@@ -69,7 +69,7 @@ def _write_cross_run(src: Path, dest: Path) -> Path:
     summary = {}
     if summary_path.exists():
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    summary["vehicle_id"] = "BUS-17"
+    summary["vehicle_id"] = "DJI-DOCK-02"
     summary["note"] = "cross-run clone for spatial merge demo"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return dest

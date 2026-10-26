@@ -31,11 +31,11 @@ def store() -> Store:
 
 
 def test_deep_merge_and_city_overlay():
-    base = {"run": {"vehicle_id": "BUS-DEMO", "camera_id": "FRONT"}, "events": {"fusion_radius_m": 20}}
-    overlay = {"run": {"vehicle_id": "BUS-17"}, "events": {"min_observations": 2}}
+    base = {"run": {"vehicle_id": "DJI-DEMO", "camera_id": "AERIAL"}, "events": {"fusion_radius_m": 20}}
+    overlay = {"run": {"vehicle_id": "DJI-DOCK-01"}, "events": {"min_observations": 2}}
     merged = deep_merge(base, overlay)
-    assert merged["run"]["vehicle_id"] == "BUS-17"
-    assert merged["run"]["camera_id"] == "FRONT"
+    assert merged["run"]["vehicle_id"] == "DJI-DOCK-01"
+    assert merged["run"]["camera_id"] == "AERIAL"
     assert merged["events"]["fusion_radius_m"] == 20
     assert merged["events"]["min_observations"] == 2
 
