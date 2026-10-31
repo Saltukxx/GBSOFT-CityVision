@@ -73,6 +73,19 @@ def webapp(path: str = "") -> FileResponse:
     return FileResponse(index)
 
 
+@app.on_event("startup")
+def _start_background() -> None:
+    """Without a Redis worker the API runs jobs itself, so it also schedules retention."""
+    import os
+
+    from cityvision.workers.jobs import redis_available, start_retention_scheduler
+
+    if os.environ.get("CITYVISION_DISABLE_SCHEDULER") == "1" or os.environ.get("PYTEST_CURRENT_TEST"):
+        return
+    if not redis_available():
+        start_retention_scheduler()
+
+
 @app.get("/")
 def dashboard() -> RedirectResponse:
     return RedirectResponse(url="/map", status_code=307)

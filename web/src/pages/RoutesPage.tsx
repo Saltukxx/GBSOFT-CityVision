@@ -22,6 +22,7 @@ import { EventMap, ROUTE_COLOR, TRACK_COLORS } from "../components/EventMap";
 import { RouteEditLayer, Swath, type Waypoints } from "../components/RouteEditLayer";
 import { Empty, ErrorState, Loading } from "../components/States";
 import { useToast } from "../components/Toast";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { formatDate, formatDuration } from "../lib/format";
 import { flightSeconds, formatDistance, lengthM, swathM } from "../lib/geo";
 
@@ -470,48 +471,5 @@ function RouteEditor({
       </div>
       <span className="route-color-key" style={{ background: ROUTE_COLOR }} aria-hidden="true" />
     </form>
-  );
-}
-
-function ConfirmDialog({
-  title,
-  body,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}: {
-  title: string;
-  body: string;
-  confirmLabel: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const { t } = useTranslation();
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const d = ref.current;
-    if (d && !d.open) d.showModal();
-    return () => d?.close();
-  }, []);
-  return (
-    <dialog ref={ref} className="dialog" onCancel={onCancel} aria-labelledby="confirm-title">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onConfirm();
-        }}
-      >
-        <h2 id="confirm-title">{title}</h2>
-        <p className="muted">{body}</p>
-        <div className="dialog-actions">
-          <button type="button" className="btn" onClick={onCancel}>
-            {t("routes.editor.cancel")}
-          </button>
-          <button type="submit" className="btn btn-danger">
-            {confirmLabel}
-          </button>
-        </div>
-      </form>
-    </dialog>
   );
 }

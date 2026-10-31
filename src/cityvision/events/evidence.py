@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import TYPE_CHECKING, List, Optional, Sequence
 
 import cv2
 import numpy as np
 
 from cityvision.pipeline.annotate import draw_detections
 from cityvision.pipeline.types import Detection, MunicipalEvent
+
+if TYPE_CHECKING:
+    from cityvision.privacy.anonymize import Anonymizer
 
 
 def _read_frame_at(cap: cv2.VideoCapture, frame_idx: int) -> Optional[np.ndarray]:
@@ -31,7 +34,13 @@ def write_evidence_packs(
     save_clips: bool = True,
     max_events: int = 50,
     draw_boxes: bool = True,
+    anonymizer: Optional["Anonymizer"] = None,
 ) -> List[MunicipalEvent]:
+    """Write evidence (frame, clean frame, crop, clip, json) for each event.
+
+    With an `anonymizer`, people and plates are blurred in every file before it
+    is written — nothing un-anonymised reaches storage or the dashboard.
+    """
     out = Path(output_dir) / "evidence"
     out.mkdir(parents=True, exist_ok=True)
     cap = cv2.VideoCapture(str(source_video))
@@ -57,6 +66,10 @@ def write_evidence_packs(
         event.evidence_dir = str(ed)
 
         frame = _read_frame_at(cap, int(event.sample_frame))
+        blurred = 0
+        if frame is not None and anonymizer is not None:
+            frame, regions = anonymizer.anonymize(frame)
+            blurred += len(regions)
         if frame is not None:
             if save_full_frame:
                 still = frame
@@ -93,12 +106,21 @@ def write_evidence_packs(
             clip_path = ed / "event.mp4"
             writer = cv2.VideoWriter(str(clip_path), fourcc, fps, (width, height))
             cap.set(cv2.CAP_PROP_POS_FRAMES, start)
+            clean = anonymizer.stream() if anonymizer is not None else None
             for _ in range(start, end + 1):
                 ok, fr = cap.read()
                 if not ok:
                     break
-                writer.write(fr)
+                writer.write(clean(fr) if clean is not None else fr)
             writer.release()
+            if clean is not None:
+                blurred = max(blurred, clean.total)
+
+        if anonymizer is not None:
+            from cityvision.privacy.anonymize import METHOD as PRIVACY_METHOD
+
+            event.privacy_blurred = blurred
+            event.privacy_method = PRIVACY_METHOD
 
         (ed / "event.json").write_text(
             json.dumps(event.to_dict(), indent=2, ensure_ascii=False) + "\n",

@@ -23,6 +23,7 @@ from cityvision.api.deps import (
     get_principal,
     get_store,
     optional_city_id,
+    require_admin,
     require_city_row,
     require_operator,
     resolve_city_id,
@@ -73,6 +74,7 @@ def _present(row: dict[str, Any]) -> dict[str, Any]:
         "trajectory_warning": payload.get("trajectory_warning"),
         "duplicate_of": payload.get("duplicate_of"),
         "candidates": row.get("candidates") or 0,
+        "raw_deleted_at": payload.get("raw_deleted_at"),
         "holdout": bool(row.get("holdout")),
         "run_id": row.get("run_id"),
         "created_at": row.get("created_at"),
@@ -215,6 +217,26 @@ def retry_processing(upload_id: str, principal: Principal = Depends(require_oper
         city_id=row.get("city_id"),
     )
     return _present(store.get_flight(upload_id) or {})
+
+
+@router.delete("/{upload_id}", status_code=204)
+def delete_flight(upload_id: str, principal: Principal = Depends(require_admin)) -> None:
+    """Erase a flight: video, telemetry, and events seen only on this flight (right to erasure)."""
+    from cityvision.privacy.retention import erase_flight
+
+    store = get_store()
+    row = _flight_or_404(upload_id, principal)
+    if row.get("status") in ("uploading", "received", "queued", "analyzing"):
+        raise HTTPException(status_code=409, detail="stop_processing_first")
+    result = erase_flight(store, upload_id)
+    store.add_audit(
+        actor=principal.username,
+        action="flight_delete",
+        entity_type="flight",
+        entity_id=upload_id,
+        detail={"name": row.get("payload", {}).get("name") if isinstance(row.get("payload"), dict) else None, **result},
+        city_id=row.get("city_id"),
+    )
 
 
 class RouteAssign(BaseModel):

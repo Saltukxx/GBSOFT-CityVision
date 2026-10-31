@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Maximize2 } from "lucide-react";
+import { Maximize2, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { CityEvent, EventDetail } from "../api/types";
@@ -51,6 +51,11 @@ export function EventPanel({ eventId, onDecide, busy, keyboard = false, variant 
       </header>
 
       <EvidenceViewer media={ev.media ?? []} alt={title} />
+      {ev.payload?.privacy_method && (
+        <p className="privacy-note">
+          <ShieldCheck size={14} aria-hidden="true" /> {t("event.anonymised")}
+        </p>
+      )}
 
       {canDecide ? (
         <section className="event-decision" aria-label={t("event.decision")}>

@@ -132,6 +132,21 @@ evidence:
   draw_boxes: true
   max_events: 50
 
+# GDPR / KVKK: blur people and licence plates in every evidence file before it is
+# written (src/cityvision/privacy/anonymize.py). The original video is not altered;
+# it is access-controlled and deleted after the city's retention period.
+privacy:
+  enabled: true
+  # COCO detectors see people and cars from the side; from straight above they miss
+  # many. For nadir footage set an aerial-trained detector (VisDrone classes are
+  # understood) and tiles: 2.
+  model: yolov8n.pt
+  tiles: 1
+  conf: 0.2
+  imgsz: 1920                # small people in aerial frames need a large input size
+  vehicles: plates           # plates | full (blur every vehicle) | off
+  legible_vehicle_ratio: 0.004  # vehicle this large with no plate found → blur it whole
+
 export:
   write_json: true
   write_video: true

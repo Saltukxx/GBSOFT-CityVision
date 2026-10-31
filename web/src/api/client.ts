@@ -164,7 +164,9 @@ export const api = {
 
   citySettings: () => request<CitySettings>("/api/city-settings"),
 
-  patchCitySettings: (body: Partial<Pick<CitySettings, "name" | "timezone" | "language" | "work_order_units">>) =>
+  patchCitySettings: (
+    body: Partial<Pick<CitySettings, "name" | "timezone" | "language" | "work_order_units" | "raw_video_days" | "rejected_evidence_days">>,
+  ) =>
     request<CitySettings>("/api/city-settings", { method: "PATCH", body: JSON.stringify(body) }),
 
   users: () => request<AdminUser[]>("/api/users"),
@@ -190,6 +192,10 @@ export const api = {
 
   flightTracks: (days = 30, routeId?: string) =>
     request<FlightTrack[]>(`/api/flights/tracks?days=${days}${routeId ? `&route_id=${encodeURIComponent(routeId)}` : ""}`),
+
+  runRetention: () => request<{ job_id: number }>("/api/city-settings/retention/run", { method: "POST" }),
+
+  deleteFlight: (id: string) => request<void>(`/api/flights/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   stopFlight: (id: string) => request<Flight>(`/api/flights/${encodeURIComponent(id)}/stop`, { method: "POST" }),
 

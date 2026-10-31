@@ -53,6 +53,8 @@ export interface EventPayload {
   /** "projected" = placed on the ground from the camera pose; "platform" = drone position only. */
   location_source?: "projected" | "platform" | null;
   location_method?: string | null;
+  privacy_blurred?: number | null;
+  privacy_method?: string | null;
   [key: string]: unknown;
 }
 
@@ -136,6 +138,7 @@ export interface Flight {
   duplicate_of?: string | null;
   candidates: number;
   holdout: boolean;
+  raw_deleted_at?: string | null;
   run_id?: number | null;
   created_at: string;
   updated_at: string;
@@ -203,6 +206,14 @@ export interface CitySettings {
   language: string;
   work_order_units: string[];
   languages: string[];
+  raw_video_days: number;
+  rejected_evidence_days: number;
+  last_retention?: {
+    status: string;
+    finished_at: string | null;
+    raw_videos_deleted?: number;
+    rejected_media_deleted?: number;
+  } | null;
 }
 
 export interface AuditEntry {

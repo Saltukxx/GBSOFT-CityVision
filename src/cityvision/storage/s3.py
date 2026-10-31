@@ -74,6 +74,13 @@ class S3ObjectStore:
         self._client.download_file(self.bucket, key, str(dest))
         return dest
 
+    def delete(self, key: str) -> bool:
+        """Remove an object (S3 delete is idempotent; True when it existed)."""
+        key = key.lstrip("/")
+        existed = self.exists(key)
+        self._client.delete_object(Bucket=self.bucket, Key=key)
+        return existed
+
     def exists(self, key: str) -> bool:
         try:
             self._client.head_object(Bucket=self.bucket, Key=key.lstrip("/"))

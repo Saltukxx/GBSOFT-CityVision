@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Upload, UserPlus } from "lucide-react";
+import { ShieldCheck, Upload, UserPlus } from "lucide-react";
 import { NavLink, Navigate, useParams } from "react-router-dom";
 import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
 import { geoJSON as leafletGeoJSON } from "leaflet";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import "leaflet/dist/leaflet.css";
 import { ApiError, api } from "../api/client";
-import type { AdminUser, AuditEntry, Role } from "../api/types";
+import type { AdminUser, AuditEntry, CitySettings, Role } from "../api/types";
 import { useCurrentUser } from "../auth/AuthContext";
 import { Empty, ErrorState, Loading } from "../components/States";
 import { useToast } from "../components/Toast";
@@ -456,16 +456,30 @@ function ModelsTab() {
 // ---------------- Settings ----------------
 
 function SettingsTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const toast = useToast();
   const q = useQuery({ queryKey: ["city-settings"], queryFn: api.citySettings });
-  const [form, setForm] = useState<{ name: string; timezone: string; language: string; units: string } | null>(null);
+  const [form, setForm] = useState<{ name: string; timezone: string; language: string; units: string; rawDays: number; rejDays: number } | null>(null);
+  const toForm = (d: CitySettings) => ({
+    name: d.name,
+    timezone: d.timezone,
+    language: d.language,
+    units: d.work_order_units.join("\n"),
+    rawDays: d.raw_video_days,
+    rejDays: d.rejected_evidence_days,
+  });
 
   useEffect(() => {
-    if (q.data && !form)
-      setForm({ name: q.data.name, timezone: q.data.timezone, language: q.data.language, units: q.data.work_order_units.join("\n") });
+    if (q.data && !form) setForm(toForm(q.data));
   }, [q.data, form]);
+  const runNow = useMutation({
+    mutationFn: api.runRetention,
+    onSuccess: () => {
+      toast.show(t("admin.settings.privacy.queued"));
+      window.setTimeout(() => void qc.invalidateQueries({ queryKey: ["city-settings"] }), 4000);
+    },
+  });
 
   const zonesList = useMemo(() => {
     try {
@@ -482,10 +496,12 @@ function SettingsTab() {
         timezone: form!.timezone,
         language: form!.language,
         work_order_units: form!.units.split("\n").map((u) => u.trim()).filter(Boolean),
+        raw_video_days: form!.rawDays,
+        rejected_evidence_days: form!.rejDays,
       }),
     onSuccess: (data) => {
       qc.setQueryData(["city-settings"], data);
-      setForm({ name: data.name, timezone: data.timezone, language: data.language, units: data.work_order_units.join("\n") });
+      setForm(toForm(data));
       toast.show(t("admin.settings.saved"));
     },
     onError: () => toast.show(t("admin.settings.failed"), { tone: "error" }),
@@ -546,7 +562,39 @@ function SettingsTab() {
           .map((u) => unitLabel(t, u))
           .join(" · ")}
       </p>
-      <p className="muted small">{t("admin.settings.notYet")}</p>
+      <section className="privacy-box">
+        <h3>
+          <ShieldCheck size={16} aria-hidden="true" /> {t("admin.settings.privacy.title")}
+        </h3>
+        <p className="muted small">{t("admin.settings.privacy.intro")}</p>
+        <div className="form-grid">
+          <label className="field">
+            <span>{t("admin.settings.privacy.rawDays")}</span>
+            <input type="number" min={0} max={3650} value={form.rawDays} onChange={(e) => setForm({ ...form, rawDays: Number(e.target.value) })} />
+            <span className="muted small field-hint">{t("admin.settings.privacy.rawHint")}</span>
+          </label>
+          <label className="field">
+            <span>{t("admin.settings.privacy.rejectedDays")}</span>
+            <input type="number" min={0} max={3650} value={form.rejDays} onChange={(e) => setForm({ ...form, rejDays: Number(e.target.value) })} />
+            <span className="muted small field-hint">{t("admin.settings.privacy.rejectedHint")}</span>
+          </label>
+        </div>
+        <p className="muted small">{t("admin.settings.privacy.forever")}</p>
+        <div className="privacy-run">
+          <span className="small">
+            {q.data.last_retention?.finished_at
+              ? t("admin.settings.privacy.lastRun", {
+                  date: formatDateTime(q.data.last_retention.finished_at, i18n.language),
+                  raw: q.data.last_retention.raw_videos_deleted ?? 0,
+                  media: q.data.last_retention.rejected_media_deleted ?? 0,
+                })
+              : t("admin.settings.privacy.neverRun")}
+          </span>
+          <button type="button" className="btn btn-sm" onClick={() => runNow.mutate()} disabled={runNow.isPending}>
+            {t("admin.settings.privacy.runNow")}
+          </button>
+        </div>
+      </section>
       <div>
         <button type="submit" className="btn btn-primary" disabled={save.isPending}>
           {t("admin.settings.save")}

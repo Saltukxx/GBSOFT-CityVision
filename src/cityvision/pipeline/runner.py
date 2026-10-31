@@ -26,6 +26,7 @@ from cityvision.pipeline.model_resolve import describe_models, resolve_model_b_p
 from cityvision.pipeline.traffic import TrafficCounter
 from cityvision.pipeline.types import Detection, RunMeta
 from cityvision.pipeline.video_reader import VideoReader
+from cityvision.privacy.anonymize import from_config as anonymizer_from_config
 from cityvision.report.html_report import write_html_report
 
 
@@ -75,6 +76,8 @@ def run_pipeline(
         default_altitude_m=_opt_float(cam_cfg.get("default_altitude_m")),
         default_pitch_deg=_opt_float(cam_cfg.get("default_pitch_deg")),
     )
+    # One anonymiser (one detector load) for all evidence and rejected samples.
+    anonymizer = anonymizer_from_config(cfg)
     geo_cfg = cfg.get("geofence", {})
     traffic_cfg = cfg.get("traffic", {})
     events_cfg = cfg.get("events", {})
@@ -284,6 +287,7 @@ def run_pipeline(
             save_clips=bool(evidence_cfg.get("save_clips", True)),
             max_events=int(evidence_cfg.get("max_events", 50)),
             draw_boxes=bool(evidence_cfg.get("draw_boxes", True)),
+            anonymizer=anonymizer,
         )
 
     rejected_summary: Dict[str, Any] = {"count": 0, "written": 0, "reasons": {}}
@@ -293,6 +297,7 @@ def run_pipeline(
             rejected=event_engine.last_rejected,
             output_dir=out,
             max_samples=int(events_cfg.get("max_rejected", 200)),
+            anonymizer=anonymizer,
         )
 
     event_dicts = [e.to_dict() for e in events]

@@ -43,6 +43,7 @@ def write_rejected_samples(
     *,
     max_samples: int = 200,
     min_spacing_frames: int = 15,
+    anonymizer: Any = None,
 ) -> Dict[str, Any]:
     """
     Write boxed frames + crops for detections that did not become events.
@@ -81,6 +82,8 @@ def write_rejected_samples(
             reasons[reason] += 1
             cap.set(cv2.CAP_PROP_POS_FRAMES, float(det.frame))
             ok, frame = cap.read()
+            if ok and anonymizer is not None:
+                frame, _ = anonymizer.anonymize(frame)
             if not ok or frame is None:
                 continue
             safe_cls = det.class_name.replace("/", "_")

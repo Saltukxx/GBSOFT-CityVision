@@ -171,7 +171,8 @@
     "locationProjected": "Estimated from the camera angle · ±{{m}} m",
     "locationPlatform": "Drone position only · object within ~{{m}} m",
     "locationPlatformHint": "The flight log had no camera angle or height, so the object is somewhere in the camera's view. Upload the DJI .SRT file or link the flight to a planned route for a precise position.",
-    "dronePosition": "Drone position"
+    "dronePosition": "Drone position",
+    "anonymised": "People and licence plates are blurred in this evidence."
   },
   "map": {
     "title": "Map",
@@ -259,7 +260,8 @@
     "refresh": "Refresh",
     "none": "—",
     "language": "Language",
-    "close": "Close"
+    "close": "Close",
+    "cancel": "Cancel"
   },
   "notFound": {
     "title": "Page not found",
@@ -391,7 +393,16 @@
       "failedStop": "Could not stop processing.",
       "failedRetry": "Could not start processing again.",
       "uploadIncomplete": "The upload never finished. Upload the video again."
-    }
+    },
+    "delete": {
+      "button": "Delete flight",
+      "title": "Delete “{{name}}”?",
+      "body": "The video, its telemetry and every candidate seen only on this flight are deleted for good. This can't be undone.",
+      "done": "Flight deleted",
+      "failed": "Could not delete the flight.",
+      "zone": "Danger zone"
+    },
+    "rawDeleted": "Original video deleted on {{date}} under the city's retention policy. The flight path, candidates and anonymised evidence remain."
   },
   "workOrders": {
     "title": "Work orders",
@@ -506,7 +517,19 @@
       "save": "Save settings",
       "saved": "Settings saved",
       "failed": "Could not save the settings.",
-      "notYet": "Data retention, detection thresholds and enabled event types will be configurable here once the pipeline reads them."
+      "privacy": {
+        "title": "Data protection",
+        "intro": "People and licence plates are blurred in all evidence before it is stored. Original footage is kept only as long as set here, then deleted automatically every day.",
+        "rawDays": "Keep original videos (days)",
+        "rawHint": "Original and annotated videos are the only un-anonymised copies.",
+        "rejectedDays": "Keep evidence of false alarms (days)",
+        "rejectedHint": "Frames kept as training labels are not deleted.",
+        "forever": "0 = keep forever",
+        "lastRun": "Last run {{date}}: {{raw}} videos and {{media}} false-alarm files deleted.",
+        "neverRun": "Not run yet.",
+        "runNow": "Run now",
+        "queued": "Retention run queued"
+      }
     },
     "audit": {
       "when": "When",

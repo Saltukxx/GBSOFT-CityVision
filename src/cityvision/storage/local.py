@@ -30,6 +30,14 @@ class LocalObjectStore:
         shutil.copy2(src, dest)
         return dest
 
+    def delete(self, key: str) -> bool:
+        """Remove an object; False if it wasn't there."""
+        path = self._path(key)
+        if path.is_file():
+            path.unlink()
+            return True
+        return False
+
     def exists(self, key: str) -> bool:
         return self._path(key).is_file()
 

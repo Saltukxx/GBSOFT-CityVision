@@ -132,6 +132,9 @@ class MunicipalEvent:
     location_accuracy_m: Optional[float] = None
     location_source: Optional[str] = None
     location_method: Optional[str] = None
+    # How many regions (people, plates, vehicles) were blurred in this event's evidence.
+    privacy_blurred: Optional[int] = None
+    privacy_method: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

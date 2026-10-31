@@ -158,11 +158,19 @@ class CitySettings(BaseModel):
     timezone: Optional[str] = Field(None, max_length=64)
     language: Optional[str] = None
     work_order_units: Optional[list[str]] = Field(None, max_length=30)
+    # GDPR retention; 0 = keep forever (the city must justify that).
+    raw_video_days: Optional[int] = Field(None, ge=0, le=3650)
+    rejected_evidence_days: Optional[int] = Field(None, ge=0, le=3650)
 
 
 def _settings_view(city: dict[str, Any]) -> dict[str, Any]:
+    from cityvision.privacy.retention import DEFAULT_RAW_VIDEO_DAYS, DEFAULT_REJECTED_EVIDENCE_DAYS
+
     props = city.get("props") or {}
     return {
+        "raw_video_days": props.get("raw_video_days", DEFAULT_RAW_VIDEO_DAYS),
+        "rejected_evidence_days": props.get("rejected_evidence_days", DEFAULT_REJECTED_EVIDENCE_DAYS),
+        "last_retention": _last_retention(city["id"]),
         "id": city["id"],
         "name": city.get("name"),
         "timezone": city.get("timezone"),
@@ -202,6 +210,10 @@ def patch_city_settings(
         if not units:
             raise HTTPException(status_code=422, detail="units_required")
         props["work_order_units"] = list(dict.fromkeys(u[:60] for u in units))
+    if body.raw_video_days is not None:
+        props["raw_video_days"] = body.raw_video_days
+    if body.rejected_evidence_days is not None:
+        props["rejected_evidence_days"] = body.rejected_evidence_days
     if body.timezone is not None:
         try:
             ZoneInfo(body.timezone)
@@ -220,6 +232,37 @@ def patch_city_settings(
         city_id=cid,
     )
     return _settings_view(city)
+
+
+def _last_retention(city_id: str) -> Optional[dict[str, Any]]:
+    store = get_store()
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT status, finished_at, result FROM jobs
+                WHERE job_type = 'retention' AND status IN ('succeeded', 'failed')
+                  AND (payload->>'only_city' IS NULL OR payload->>'only_city' = %s)
+                ORDER BY id DESC LIMIT 1
+                """,
+                (city_id,),
+            )
+            row = cur.fetchone()
+    if not row:
+        return None
+    result = (row.get("result") or {}).get(city_id) or {}
+    return {"status": row["status"], "finished_at": row["finished_at"].isoformat() if row["finished_at"] else None, **result}
+
+
+@router.post("/city-settings/retention/run")
+def run_retention_now(city_id: Optional[str] = None, principal: Principal = Depends(require_admin)) -> dict[str, Any]:
+    """Apply the retention policy for this city now (normally runs daily)."""
+    from cityvision.workers.jobs import enqueue_job
+
+    cid = _city_for(principal, city_id)
+    job_id, _ = enqueue_job(get_store(), "retention", {"only_city": cid, "city_id": cid})
+    get_store().add_audit(actor=principal.username, action="retention_run", entity_type="city", entity_id=cid, city_id=cid)
+    return {"job_id": job_id}
 
 
 # ---------- zones & routes upload ----------

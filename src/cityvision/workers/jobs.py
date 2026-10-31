@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -115,6 +116,10 @@ def run_job(job_id: int) -> None:
                 )
             elif job_type == "analyze_video":
                 result = _run_analyze_video(store, payload, job_id, hb)
+            elif job_type == "retention":
+                from cityvision.privacy.retention import run_retention
+
+                result = run_retention(store, city_id=payload.get("only_city"))
             elif job_type == "flight_upload":
                 from cityvision.flights.uploads import finalize_and_analyze
 
@@ -346,6 +351,48 @@ def _redis_push(job_id: int) -> bool:
         return False
 
 
+def retention_tick(store: Optional[Store] = None, every_hours: int = 23) -> Optional[int]:
+    """Queue the daily retention run if none was queued in the last `every_hours`."""
+    store = store or Store()
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1 FROM jobs WHERE job_type = 'retention'
+                  AND payload->>'only_city' IS NULL
+                  AND created_at > NOW() - make_interval(hours => %s)
+                LIMIT 1
+                """,
+                (every_hours,),
+            )
+            recent = cur.fetchone()
+    if recent:
+        return None
+    token = set_tenant_city(TENANT_ALL)
+    try:
+        job_id, _ = enqueue_job(store, "retention", {})
+    finally:
+        reset_tenant_city(token)
+    log.info("queued daily retention job %s", job_id)
+    return job_id
+
+
+def start_retention_scheduler(interval_s: int = 3600) -> threading.Thread:
+    """Background thread for setups without a separate worker: check hourly."""
+
+    def loop() -> None:
+        while True:
+            try:
+                retention_tick()
+            except Exception:  # noqa: BLE001
+                log.warning("retention tick failed", exc_info=True)
+            time.sleep(interval_s)
+
+    t = threading.Thread(target=loop, daemon=True, name="cv-retention")
+    t.start()
+    return t
+
+
 def redis_worker_loop(stop_event: Optional[threading.Event] = None) -> None:
     """Blocking BLPOP loop — used by scripts/job_worker.py."""
     settings = get_settings()
@@ -354,7 +401,14 @@ def redis_worker_loop(stop_event: Optional[threading.Event] = None) -> None:
         raise RuntimeError(f"Redis unavailable at {settings.redis_url}")
     startup_reclaim(older_than_minutes=30)
     log.info("Redis worker listening on %s", settings.redis_queue_key)
+    last_tick = 0.0
     while stop_event is None or not stop_event.is_set():
+        if time.time() - last_tick > 3600:
+            last_tick = time.time()
+            try:
+                retention_tick()
+            except Exception:  # noqa: BLE001
+                log.warning("retention tick failed", exc_info=True)
         item = client.blpop(settings.redis_queue_key, timeout=2)
         if not item:
             continue

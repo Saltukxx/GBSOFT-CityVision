@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, RotateCcw, Square } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, RotateCcw, Square, Trash2 } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client";
 import { useToast } from "../components/Toast";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ACTIVE_FLIGHT_STATUSES } from "../api/types";
 import { useCurrentUser } from "../auth/AuthContext";
 import type { Adherence } from "../api/types";
@@ -54,6 +55,18 @@ export function FlightDetailPage() {
       void qc.invalidateQueries({ queryKey: ["flight", flightId] });
       void qc.invalidateQueries({ queryKey: ["flights"] });
     },
+  });
+  const navigate = useNavigate();
+  const isAdmin = ["admin", "superadmin"].includes(user.role);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const remove = useMutation({
+    mutationFn: () => api.deleteFlight(flightId),
+    onSuccess: () => {
+      toast.show(t("flights.delete.done"));
+      void qc.invalidateQueries({ queryKey: ["flights"] });
+      navigate("/flights");
+    },
+    onError: () => toast.show(t("flights.delete.failed"), { tone: "error" }),
   });
   // Shown value flips on click; cleared once the server's copy is back.
   const [holdoutShown, setHoldoutShown] = useState<boolean | null>(null);
@@ -151,6 +164,7 @@ export function FlightDetailPage() {
       {f.status === "uploading" && <p className="form-warning">{t("flights.resumeHint")}</p>}
       {!f.has_telemetry && f.status !== "uploading" && <p className="form-warning">{t("flights.noTelemetry")}</p>}
       {f.trajectory_warning && <p className="form-warning">{f.trajectory_warning}</p>}
+      {f.raw_deleted_at && <p className="info-note">{t("flights.rawDeleted", { date: formatDate(f.raw_deleted_at, lang) })}</p>}
       {user.role === "superadmin" && f.status === "succeeded" && (
         <label className="card holdout-toggle">
           <input
@@ -246,6 +260,30 @@ export function FlightDetailPage() {
             </ul>
           )}
         </section>
+      )}
+
+      {isAdmin && !["uploading", "received", "queued", "analyzing"].includes(f.status) && (
+        <section className="danger-section">
+          <div>
+            <strong>{t("flights.delete.zone")}</strong>
+            <p className="muted small">{t("flights.delete.body")}</p>
+          </div>
+          <button type="button" className="btn btn-danger-outline" onClick={() => setConfirmDelete(true)}>
+            <Trash2 size={15} aria-hidden="true" /> {t("flights.delete.button")}
+          </button>
+        </section>
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          title={t("flights.delete.title", { name: f.name })}
+          body={t("flights.delete.body")}
+          confirmLabel={t("flights.delete.button")}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => {
+            setConfirmDelete(false);
+            remove.mutate();
+          }}
+        />
       )}
     </div>
   );
