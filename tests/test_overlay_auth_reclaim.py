@@ -122,12 +122,14 @@ def test_auth_role_matrix(store: Store, monkeypatch):
 def test_reclaim_stale_jobs_returns_ids(store: Store):
     job_id = store.create_job("ingest_run", {"run_dir": "/tmp/reclaim-test"})
     assert store.claim_job(job_id)
-    # Backdate started_at so reclaim sees it as stale
+    # A dead worker: started long ago and stopped sending heartbeats.
+    # (A job that is still beating is never reclaimed, however long it runs.)
     with store.connect() as conn:
         with conn.cursor() as cur:
+            old = datetime.now(timezone.utc) - timedelta(minutes=60)
             cur.execute(
-                "UPDATE jobs SET started_at = %s WHERE id = %s",
-                (datetime.now(timezone.utc) - timedelta(minutes=60), job_id),
+                "UPDATE jobs SET started_at = %s, heartbeat_at = %s WHERE id = %s",
+                (old, old, job_id),
             )
         store._commit(conn)
 
