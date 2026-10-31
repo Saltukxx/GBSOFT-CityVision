@@ -9,13 +9,17 @@ from fastapi.staticfiles import StaticFiles
 from cityvision.api.auth import ApiKeyMiddleware, TenantMiddleware
 from cityvision.api.deps import bind_tenant
 from cityvision.api.routers import (
+    admin,
     auth_export,
     edge,
     events,
     fleet,
+    flights,
     health,
     ingest,
+    learning,
     media_jobs,
+    route_planning,
     zones,
 )
 from cityvision.config import ROOT
@@ -42,9 +46,31 @@ app.include_router(zones.router)
 app.include_router(ingest.router)
 app.include_router(media_jobs.router)
 app.include_router(edge.router)
+app.include_router(flights.router)
+app.include_router(admin.router)
+app.include_router(learning.router)
+app.include_router(route_planning.router)
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Operator web app (React build from web/, `npm run build`). Served under /app;
+# unknown sub-paths fall back to index.html so client-side routes deep-link.
+WEBAPP_DIR = ROOT / "web" / "dist"
+if (WEBAPP_DIR / "assets").exists():
+    app.mount("/app/assets", StaticFiles(directory=str(WEBAPP_DIR / "assets")), name="webapp-assets")
+
+
+@app.get("/app", include_in_schema=False)
+@app.get("/app/{path:path}", include_in_schema=False)
+def webapp(path: str = "") -> FileResponse:
+    candidate = (WEBAPP_DIR / path).resolve()
+    if path and candidate.is_file() and WEBAPP_DIR.resolve() in candidate.parents:
+        return FileResponse(candidate)
+    index = WEBAPP_DIR / "index.html"
+    if not index.exists():
+        raise HTTPException(status_code=404, detail="web app not built (cd web && npm run build)")
+    return FileResponse(index)
 
 
 @app.get("/")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import cv2
 from tqdm import tqdm
@@ -44,7 +44,9 @@ def run_pipeline(
     duration_sec: Optional[float] = None,
     stride: Optional[int] = None,
     profile: Optional[str] = None,
+    progress: Optional[Callable[[float], None]] = None,
 ) -> Path:
+    """`progress`, when given, is called with the fraction of frames processed (0..1)."""
     cfg = pipeline_cfg or load_pipeline_config(
         city_id=city_id,
         profile=profile if profile is not None else DEFAULT_PROFILE,
@@ -174,7 +176,11 @@ def run_pipeline(
             )
 
         total = reader.planned_emits()
+        done = 0
         for batch in tqdm(reader, total=total, desc="frames"):
+            done += 1
+            if progress and total:
+                progress(min(1.0, done / total))
             dets = detector.infer(
                 batch.image,
                 batch.index,

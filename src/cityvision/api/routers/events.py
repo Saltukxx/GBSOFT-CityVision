@@ -13,7 +13,12 @@ from cityvision.api.deps import (
     require_operator,
     resolve_city_id,
 )
-from cityvision.api.schemas import ReviewBody, StatusUpdate, WorkOrderCreate
+from cityvision.api.schemas import (
+    REVIEW_REASONS,
+    ReviewBody,
+    StatusUpdate,
+    WorkOrderCreate,
+)
 from cityvision.api.security import actor_from_request_headers
 
 router = APIRouter(prefix="/api", tags=["events"])
@@ -25,14 +30,25 @@ def list_events(
     type: Optional[str] = Query(None, alias="type"),
     city_id: Optional[str] = None,
     limit: int = Query(200, ge=1, le=2000),
+    thumbs: bool = Query(False, description="Attach a signed thumbnail URL per event"),
     principal: Principal = Depends(get_principal),
 ) -> list[dict[str, Any]]:
-    return get_store().list_events(
+    store = get_store()
+    rows = store.list_events(
         status=status,
         event_type=type,
         limit=limit,
         city_id=resolve_city_id(principal, city_id),
     )
+    if thumbs and rows:
+        from cityvision.api.routers.media_jobs import attach_media_urls
+
+        firsts = store.first_images_for_events([r["event_id"] for r in rows])
+        attach_media_urls(list(firsts.values()))
+        for r in rows:
+            m = firsts.get(r["event_id"])
+            r["thumb_url"] = m.get("url") if m else None
+    return rows
 
 
 @router.get("/events/near")
@@ -110,6 +126,11 @@ def review_event(
     require_city_row(
         get_store().get_event(event_id), principal, detail="event not found"
     )
+    if body.reason is not None:
+        if body.label not in ("wrong", "false_positive"):
+            raise HTTPException(status_code=400, detail="reason is only allowed with label 'wrong'")
+        if body.reason not in REVIEW_REASONS:
+            raise HTTPException(status_code=400, detail=f"unsupported reason: {body.reason}")
     reviewer = (
         principal.username
         if principal.is_authenticated and principal.username != "anonymous"
@@ -123,6 +144,7 @@ def review_event(
             reviewer=reviewer,
             source="api",
             unit=body.unit,
+            reason=body.reason,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="event not found") from exc

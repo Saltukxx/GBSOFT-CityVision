@@ -102,6 +102,10 @@ class Settings:
             or (ROOT / "outputs" / "edge")
         )
         self.edge_max_upload_mb: int = int(_env("CITYVISION_EDGE_MAX_UPLOAD_MB", "200") or "200")
+        # Browser flight uploads (resumable, chunked) — much larger than edge segments.
+        self.flight_max_upload_gb: float = float(
+            _env("CITYVISION_FLIGHT_MAX_UPLOAD_GB", "20") or "20"
+        )
         # When true, jobs always run in-process threads (ignore Redis). Useful for tests/local.
         self.job_inline: bool = (_env("CITYVISION_JOB_INLINE", "0") or "0").strip().lower() in {
             "1",
@@ -118,6 +122,7 @@ class Settings:
             "/static",
             "/report",
             "/api/auth/login",
+            "/api/auth/config",
         )
 
     @property

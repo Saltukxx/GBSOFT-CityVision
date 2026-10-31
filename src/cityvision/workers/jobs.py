@@ -76,7 +76,11 @@ def run_job(job_id: int) -> None:
                     payload["path"], store=store, city_id=job_city
                 )
             elif job_type == "analyze_video":
-                result = _run_analyze_video(store, payload)
+                result = _run_analyze_video(store, payload, job_id)
+            elif job_type == "flight_upload":
+                from cityvision.flights.uploads import finalize_and_analyze
+
+                result = finalize_and_analyze(store, payload, job_id, _run_analyze_video)
             else:
                 raise ValueError(f"unknown job_type: {job_type}")
             store.mark_job_done(job_id, ok=True, result=result)
@@ -91,7 +95,27 @@ def run_job(job_id: int) -> None:
         reset_tenant_city(token)
 
 
-def _run_analyze_video(store: Store, payload: Dict[str, Any]) -> Dict[str, Any]:
+def _progress_reporter(store: Store, job_id: Optional[int], offset: float = 0.0):
+    """Map pipeline progress (0..1) into [offset, 0.97] and write it at most every 2%."""
+    if job_id is None:
+        return None
+    last = [-1.0]
+
+    def report(fraction: float) -> None:
+        value = offset + (0.97 - offset) * fraction
+        if value - last[0] >= 0.02:
+            last[0] = value
+            try:
+                store.set_job_progress(job_id, value)
+            except Exception:  # noqa: BLE001 — progress must never fail the job
+                log.debug("progress update failed for job %s", job_id, exc_info=True)
+
+    return report
+
+
+def _run_analyze_video(
+    store: Store, payload: Dict[str, Any], job_id: Optional[int] = None
+) -> Dict[str, Any]:
     """Memphis: download video (+ GPS), run_pipeline, ingest events."""
     from cityvision.pipeline.runner import run_pipeline
     from cityvision.storage import get_object_store
@@ -131,6 +155,7 @@ def _run_analyze_video(store: Store, payload: Dict[str, Any]) -> Dict[str, Any]:
         vehicle_id=str(vehicle_id) if vehicle_id else None,
         camera_id=str(camera_id) if camera_id else None,
         city_id=str(city_id) if city_id else None,
+        progress=_progress_reporter(store, job_id, float(payload.get("progress_offset") or 0.0)),
     )
     # Ensure city/route land in summary for ingest
     summary_path = out_dir / "summary.json"
@@ -162,6 +187,8 @@ def _run_analyze_video(store: Store, payload: Dict[str, Any]) -> Dict[str, Any]:
     store.update_edge_video_upload(
         upload_id, status="succeeded", run_dir=str(out_dir.resolve())
     )
+    if job_id is not None:
+        store.set_job_progress(job_id, 1.0)
     return {
         "upload_id": upload_id,
         "run_dir": str(out_dir.resolve()),

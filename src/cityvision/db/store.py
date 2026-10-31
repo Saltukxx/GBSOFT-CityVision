@@ -105,6 +105,129 @@ class Store:
                 )
                 return [_serialize_row(r) for r in cur.fetchall()]
 
+    def get_city(self, city_id: str) -> Optional[Dict[str, Any]]:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, name, timezone, props, created_at FROM cities WHERE id = %s",
+                    (city_id,),
+                )
+                row = cur.fetchone()
+        return _serialize_row(row) if row else None
+
+    def update_city(
+        self,
+        city_id: str,
+        *,
+        name: Optional[str] = None,
+        timezone: Optional[str] = None,
+        props_merge: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        sets: List[str] = []
+        args: List[Any] = []
+        if name is not None:
+            sets.append("name = %s")
+            args.append(name)
+        if timezone is not None:
+            sets.append("timezone = %s")
+            args.append(timezone)
+        if props_merge:
+            sets.append("props = props || %s")
+            args.append(Jsonb(props_merge))
+        if not sets:
+            return self.get_city(city_id)
+        args.append(city_id)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    UPDATE cities SET {', '.join(sets)} WHERE id = %s
+                    RETURNING id, name, timezone, props, created_at
+                    """,
+                    args,
+                )
+                row = cur.fetchone()
+            self._commit(conn)
+        return _serialize_row(row) if row else None
+
+    def review_stats(self, city_id: Optional[str] = None, days: int = 7) -> Dict[str, Any]:
+        """Review activity over the last `days`: decisions, reject reasons, speed."""
+        city_clause = " AND e.city_id = %s" if city_id else ""
+        base: List[Any] = [days] + ([city_id] if city_id else [])
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT r.label, COUNT(*) AS c
+                    FROM review_feedback r JOIN events e ON e.event_id = r.event_id
+                    WHERE r.created_at >= NOW() - make_interval(days => %s){city_clause}
+                    GROUP BY r.label
+                    """,
+                    base,
+                )
+                by_label = {row["label"]: row["c"] for row in cur.fetchall()}
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(r.reason, 'unspecified') AS reason, COUNT(*) AS c
+                    FROM review_feedback r JOIN events e ON e.event_id = r.event_id
+                    WHERE r.created_at >= NOW() - make_interval(days => %s)
+                      AND r.label IN ('wrong', 'false_positive'){city_clause}
+                    GROUP BY 1 ORDER BY 2 DESC
+                    """,
+                    base,
+                )
+                reasons = {row["reason"]: row["c"] for row in cur.fetchall()}
+                cur.execute(
+                    f"""
+                    SELECT r.reviewer, COUNT(*) AS c
+                    FROM review_feedback r JOIN events e ON e.event_id = r.event_id
+                    WHERE r.created_at >= NOW() - make_interval(days => %s){city_clause}
+                    GROUP BY r.reviewer ORDER BY 2 DESC LIMIT 10
+                    """,
+                    base,
+                )
+                by_reviewer = {row["reviewer"]: row["c"] for row in cur.fetchall()}
+                # Hours from an event appearing to its first decision.
+                cur.execute(
+                    f"""
+                    SELECT percentile_cont(0.5) WITHIN GROUP (
+                             ORDER BY EXTRACT(EPOCH FROM first_review - e.created_at) / 3600.0
+                           ) AS median_hours
+                    FROM (
+                      SELECT event_id, MIN(created_at) AS first_review
+                      FROM review_feedback GROUP BY event_id
+                    ) f
+                    JOIN events e ON e.event_id = f.event_id
+                    WHERE f.first_review >= NOW() - make_interval(days => %s){city_clause}
+                    """,
+                    base,
+                )
+                median = cur.fetchone()["median_hours"]
+                cur.execute(
+                    f"""
+                    SELECT COUNT(*) AS c FROM edge_video_uploads e
+                    WHERE e.created_at >= NOW() - make_interval(days => %s)
+                      AND e.status NOT IN ('cancelled', 'duplicate'){city_clause}
+                    """,
+                    base,
+                )
+                flights = cur.fetchone()["c"]
+        confirmed = sum(by_label.get(k, 0) for k in ("correct", "confirmed", "work_order"))
+        rejected = sum(by_label.get(k, 0) for k in ("wrong", "false_positive"))
+        decided = confirmed + rejected
+        return {
+            "days": days,
+            "decisions": sum(by_label.values()),
+            "confirmed": confirmed,
+            "false_alarms": rejected,
+            "unsure": by_label.get("unsure", 0),
+            "precision": round(confirmed / decided, 3) if decided else None,
+            "false_alarm_reasons": reasons,
+            "by_reviewer": by_reviewer,
+            "median_hours_to_decision": round(float(median), 2) if median is not None else None,
+            "flights": flights,
+        }
+
     def upsert_run(self, run_dir: str, meta: Dict[str, Any], summary: Dict[str, Any]) -> int:
         from cityvision.settings import get_settings
 
@@ -603,6 +726,11 @@ class Store:
         status: Optional[str] = None,
         note: Optional[str] = None,
         assignee: Optional[str] = None,
+        *,
+        unit: Optional[str] = None,
+        due_date: Optional[Any] = None,
+        clear_due_date: bool = False,
+        actor: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         from cityvision.domain.statuses import WORK_ORDER_STATUSES
 
@@ -619,6 +747,14 @@ class Store:
         if assignee is not None:
             sets.append("assignee = %s")
             args.append(assignee)
+        if unit is not None:
+            sets.append("unit = %s")
+            args.append(unit)
+        if clear_due_date:
+            sets.append("due_date = NULL")
+        elif due_date is not None:
+            sets.append("due_date = %s")
+            args.append(due_date)
         args.append(work_order_id)
         with self.connect() as conn:
             with conn.cursor() as cur:
@@ -626,24 +762,44 @@ class Store:
                     f"""
                     UPDATE work_orders SET {', '.join(sets)}
                     WHERE id = %s
-                    RETURNING id, event_id, unit, note, status, assignee, created_at, updated_at
+                    RETURNING id, event_id, unit, note, status, assignee, due_date,
+                              created_at, updated_at
                     """,
                     args,
                 )
                 row = cur.fetchone()
-                if row and status == "resolved":
+                if row and status is not None:
+                    # The event mirrors its work order: done → resolved,
+                    # cancelled → back to confirmed, reopened → work order again.
+                    event_status = {
+                        "resolved": "resolved",
+                        "cancelled": "confirmed",
+                    }.get(status, "work_order_created")
                     cur.execute(
                         "UPDATE events SET status = %s WHERE event_id = %s",
-                        ("resolved", row["event_id"]),
+                        (event_status, row["event_id"]),
                     )
             self._commit(conn)
         if row:
+            changes = {
+                k: v
+                for k, v in {
+                    "status": status,
+                    "note": note,
+                    "assignee": assignee,
+                    "unit": unit,
+                    "due_date": str(due_date) if due_date is not None else None,
+                }.items()
+                if v is not None
+            }
+            if clear_due_date:
+                changes["due_date"] = None
             self.add_audit(
-                actor=assignee or "system",
+                actor=actor or "system",
                 action="work_order_update",
                 entity_type="work_order",
                 entity_id=str(work_order_id),
-                detail={"status": status, "note": note, "assignee": assignee},
+                detail={"event_id": row["event_id"], **changes},
             )
         return _serialize_row(row) if row else None
 
@@ -651,7 +807,8 @@ class Store:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, event_id, unit, note, status, assignee, created_at, updated_at
+                    SELECT id, event_id, unit, note, status, assignee, due_date,
+                           created_at, updated_at
                     FROM work_orders WHERE id = %s
                     """,
                     (work_order_id,),
@@ -938,6 +1095,7 @@ class Store:
         reviewer: str = "operator",
         source: str = "api",
         unit: str = "ops",
+        reason: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Record review feedback and update event status (+ optional work order)."""
         status_map = {
@@ -948,6 +1106,7 @@ class Store:
             "confirmed": "confirmed",
             "false_positive": "false_positive",
             "under_review": "under_review",
+            "unsure": "under_review",
         }
         if label not in status_map and label not in status_map.values():
             raise ValueError(f"unsupported review label: {label}")
@@ -960,11 +1119,11 @@ class Store:
                     raise KeyError(event_id)
                 cur.execute(
                     """
-                    INSERT INTO review_feedback (event_id, label, note, reviewer, source)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO review_feedback (event_id, label, note, reviewer, source, reason)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id, created_at
                     """,
-                    (event_id, label, note, reviewer, source),
+                    (event_id, label, note, reviewer, source, reason),
                 )
                 fb = cur.fetchone()
                 work_order_id = None
@@ -987,6 +1146,7 @@ class Store:
             "feedback_id": int(fb["id"]),
             "event_id": event_id,
             "label": label,
+            "reason": reason,
             "status": new_status,
             "work_order_id": work_order_id,
             "created_at": fb["created_at"].isoformat()
@@ -998,7 +1158,13 @@ class Store:
             action="review",
             entity_type="event",
             entity_id=event_id,
-            detail={"label": label, "status": new_status, "work_order_id": work_order_id, "source": source},
+            detail={
+                "label": label,
+                "reason": reason,
+                "status": new_status,
+                "work_order_id": work_order_id,
+                "source": source,
+            },
         )
         return out
 
@@ -1018,7 +1184,8 @@ class Store:
             args.append(city_id)
         args.append(limit)
         sql = f"""
-            SELECT r.id, r.event_id, r.label, r.note, r.reviewer, r.source, r.created_at, e.city_id
+            SELECT r.id, r.event_id, r.label, r.reason, r.note, r.reviewer, r.source,
+                   r.created_at, e.city_id
             FROM review_feedback r
             JOIN events e ON e.event_id = r.event_id
             WHERE {' AND '.join(clauses)}
@@ -1180,17 +1347,152 @@ class Store:
         if city_id:
             clauses.append("(city_id = %s OR city = %s)")
             args.extend([city_id, city_id])
-        sql = f"""
-            SELECT id, name, city, city_id, props, created_at,
-                   ST_AsGeoJSON(geom::geometry)::json AS geometry
-            FROM routes
+        clauses = [c.replace("city_id", "r.city_id").replace("city =", "r.city =") for c in clauses]
+        sql = f"""{self._ROUTE_SELECT}
             WHERE {' AND '.join(clauses)}
-            ORDER BY id
+            ORDER BY r.name
         """
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, args)
                 return [_serialize_row(r) for r in cur.fetchall()]
+
+    # ---------- Route planning & flight paths ----------
+
+    _ROUTE_SELECT = """
+        SELECT r.id, r.name, r.city, r.city_id, r.props, r.created_at, r.updated_at, r.created_by,
+               ST_AsGeoJSON(r.geom::geometry)::json AS geometry,
+               ST_Length(r.geom) AS length_m,
+               (SELECT COUNT(*) FROM edge_video_uploads u
+                 WHERE u.route_id = r.id AND u.status NOT IN ('cancelled', 'duplicate')) AS flights,
+               (SELECT MAX(u.created_at) FROM edge_video_uploads u
+                 WHERE u.route_id = r.id AND u.status NOT IN ('cancelled', 'duplicate')) AS last_flown
+        FROM routes r
+    """
+
+    def get_route(self, route_id: str) -> Optional[Dict[str, Any]]:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"{self._ROUTE_SELECT} WHERE r.id = %s", (route_id,))
+                row = cur.fetchone()
+        return _serialize_row(row) if row else None
+
+    def save_planned_route(
+        self,
+        route_id: str,
+        *,
+        name: str,
+        city_id: str,
+        coordinates: List[List[float]],
+        props: Dict[str, Any],
+        actor: str,
+    ) -> Dict[str, Any]:
+        pts = ", ".join(f"{float(p[0])} {float(p[1])}" for p in coordinates)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO routes (id, name, city, city_id, geom, props, created_by, updated_at)
+                    VALUES (%s, %s, %s, %s, ST_GeogFromText(%s), %s, %s, NOW())
+                    ON CONFLICT (id) DO UPDATE SET
+                      name = EXCLUDED.name,
+                      geom = EXCLUDED.geom,
+                      props = EXCLUDED.props,
+                      updated_at = NOW()
+                    """,
+                    (route_id, name, city_id, city_id, f"SRID=4326;LINESTRING({pts})", Jsonb(props), actor),
+                )
+            self._commit(conn)
+        return self.get_route(route_id) or {}
+
+    def delete_route(self, route_id: str) -> bool:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM routes WHERE id = %s", (route_id,))
+                ok = cur.rowcount > 0
+            self._commit(conn)
+        return ok
+
+    def flight_tracks(
+        self,
+        city_id: Optional[str] = None,
+        days: int = 30,
+        route_id: Optional[str] = None,
+        limit: int = 200,
+    ) -> List[Dict[str, Any]]:
+        """Flights that have a GPS track, newest first."""
+        clauses = [
+            "u.created_at >= NOW() - make_interval(days => %s)",
+            "u.status NOT IN ('cancelled', 'duplicate')",
+            "jsonb_array_length(COALESCE(r.summary->'track', '[]'::jsonb)) > 1",
+        ]
+        args: List[Any] = [days]
+        if city_id:
+            clauses.append("u.city_id = %s")
+            args.append(city_id)
+        if route_id:
+            clauses.append("u.route_id = %s")
+            args.append(route_id)
+        args.append(limit)
+        sql = f"""
+            SELECT u.upload_id AS id,
+                   COALESCE(u.payload->>'name', u.payload->>'task_name', u.payload->>'run_name') AS name,
+                   u.payload->>'flight_date' AS flight_date,
+                   u.created_at, u.route_id, u.status, u.holdout,
+                   r.summary->'track' AS track,
+                   (SELECT COUNT(DISTINCT o.event_id) FROM observations o WHERE o.run_id = r.id) AS candidates
+            FROM edge_video_uploads u
+            JOIN runs r ON r.run_dir = u.run_dir
+            WHERE {' AND '.join(clauses)}
+            ORDER BY u.created_at DESC
+            LIMIT %s
+        """
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, args)
+                return [_serialize_row(r) for r in cur.fetchall()]
+
+    def route_adherence(
+        self, route_id: str, track_lonlat: List[List[float]], tolerance_m: float = 30.0
+    ) -> Optional[Dict[str, Any]]:
+        """How closely a flown track followed a planned route.
+
+        coverage: share of the route's length that the track passed within `tolerance_m` of.
+        off_route: share of track points farther than `tolerance_m` from the route.
+        """
+        if len(track_lonlat) < 2:
+            return None
+        line = "SRID=4326;LINESTRING(" + ", ".join(f"{float(p[0])} {float(p[1])}" for p in track_lonlat) + ")"
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    WITH rt AS (SELECT geom FROM routes WHERE id = %(rid)s AND geom IS NOT NULL),
+                         tr AS (SELECT ST_GeogFromText(%(line)s) AS g),
+                         pts AS (
+                           SELECT (ST_DumpPoints(tr.g::geometry)).geom::geography AS p FROM tr
+                         )
+                    SELECT
+                      ST_Length(rt.geom) AS route_m,
+                      -- geography overload: the geometry cast lost the overlap entirely
+                      ST_Length(ST_Intersection(rt.geom, ST_Buffer(tr.g, %(tol)s))) AS covered_m,
+                      (SELECT AVG(CASE WHEN ST_Distance(pts.p, rt.geom) > %(tol)s THEN 1.0 ELSE 0.0 END) FROM pts)
+                        AS off_route,
+                      (SELECT MAX(ST_Distance(pts.p, rt.geom)) FROM pts) AS max_deviation_m
+                    FROM rt, tr
+                    """,
+                    {"rid": route_id, "line": line, "tol": tolerance_m},
+                )
+                row = cur.fetchone()
+        if not row or not row["route_m"]:
+            return None
+        return {
+            "tolerance_m": tolerance_m,
+            "route_m": round(float(row["route_m"]), 1),
+            "coverage": round(min(1.0, float(row["covered_m"] or 0) / float(row["route_m"])), 3),
+            "off_route": round(float(row["off_route"] or 0), 3),
+            "max_deviation_m": round(float(row["max_deviation_m"] or 0), 1),
+        }
 
     def list_work_orders(
         self,
@@ -1209,7 +1511,8 @@ class Store:
         args.append(limit)
         sql = f"""
             SELECT wo.id, wo.event_id, wo.unit, wo.note, wo.status, wo.assignee,
-                   wo.created_at, wo.updated_at, e.city_id
+                   wo.due_date, wo.created_at, wo.updated_at, e.city_id,
+                   e.type AS event_type, e.lat, e.lon, e.confidence, e.confidence_band
             FROM work_orders wo
             JOIN events e ON e.event_id = wo.event_id
             WHERE {' AND '.join(clauses)}
@@ -1329,6 +1632,26 @@ class Store:
                 )
                 return [_serialize_row(r) for r in cur.fetchall()]
 
+    def first_images_for_events(self, event_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """One thumbnail per event (crop preferred over full frame), in one query."""
+        if not event_ids:
+            return {}
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT DISTINCT ON (m.event_id)
+                           m.id, m.event_id, m.media_type, m.path, m.content_type,
+                           m.bytes, m.object_key, m.created_at, e.city_id
+                    FROM event_media m
+                    JOIN events e ON e.event_id = m.event_id
+                    WHERE m.event_id = ANY(%s) AND m.media_type IN ('crop', 'image')
+                    ORDER BY m.event_id, (m.media_type = 'crop') DESC, m.id
+                    """,
+                    (list(event_ids),),
+                )
+                return {r["event_id"]: _serialize_row(r) for r in cur.fetchall()}
+
     def get_event_media(self, media_id: int) -> Optional[Dict[str, Any]]:
         with self.connect() as conn:
             with conn.cursor() as cur:
@@ -1446,7 +1769,7 @@ class Store:
                 cur.execute(
                     """
                     SELECT id, job_type, status, payload, result, error, city_id,
-                           created_at, started_at, finished_at
+                           progress, created_at, started_at, finished_at
                     FROM jobs WHERE id = %s
                     """,
                     (job_id,),
@@ -1609,6 +1932,16 @@ class Store:
                 raise
             return int(row["id"])
 
+    def set_user_active(self, username: str, active: bool) -> bool:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE users SET active = %s WHERE username = %s", (active, username)
+                )
+                ok = cur.rowcount > 0
+            self._commit(conn)
+        return ok
+
     def get_user(self, username: str) -> Optional[Dict[str, Any]]:
         with self.connect() as conn:
             with conn.cursor() as cur:
@@ -1656,12 +1989,29 @@ class Store:
         limit: int = 100,
         entity_type: Optional[str] = None,
         city_id: Optional[str] = None,
+        *,
+        actor: Optional[str] = None,
+        action: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        before_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         clauses = ["1=1"]
         args: List[Any] = []
         if entity_type:
             clauses.append("entity_type = %s")
             args.append(entity_type)
+        if actor:
+            clauses.append("actor = %s")
+            args.append(actor)
+        if action:
+            clauses.append("action = %s")
+            args.append(action)
+        if entity_id:
+            clauses.append("entity_id = %s")
+            args.append(entity_id)
+        if before_id:
+            clauses.append("id < %s")
+            args.append(before_id)
         if city_id:
             clauses.append("city_id = %s")
             args.append(city_id)
@@ -2009,6 +2359,7 @@ class Store:
         gps_object_key: Optional[str] = None,
         nbytes: Optional[int] = None,
         payload: Optional[Dict[str, Any]] = None,
+        status: str = "received",
     ) -> Dict[str, Any]:
         with self.connect() as conn:
             with conn.cursor() as cur:
@@ -2018,7 +2369,7 @@ class Store:
                       upload_id, device_id, city_id, vehicle_id, route_id,
                       object_key, gps_object_key, bytes, checksum, status, payload
                     ) VALUES (
-                      %s, %s, %s, %s, %s, %s, %s, %s, %s, 'received', %s
+                      %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
                     RETURNING id, upload_id, device_id, city_id, vehicle_id, route_id,
                               object_key, gps_object_key, bytes, checksum, status,
@@ -2034,6 +2385,7 @@ class Store:
                         gps_object_key,
                         nbytes,
                         checksum,
+                        status,
                         Jsonb(payload or {}),
                     ),
                 )
@@ -2049,9 +2401,25 @@ class Store:
         job_id: Optional[int] = None,
         run_dir: Optional[str] = None,
         error: Optional[str] = None,
+        checksum: Optional[str] = None,
+        nbytes: Optional[int] = None,
+        gps_object_key: Optional[str] = None,
+        payload_merge: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         sets = ["updated_at = NOW()"]
         args: List[Any] = []
+        if checksum is not None:
+            sets.append("checksum = %s")
+            args.append(checksum)
+        if nbytes is not None:
+            sets.append("bytes = %s")
+            args.append(nbytes)
+        if gps_object_key is not None:
+            sets.append("gps_object_key = %s")
+            args.append(gps_object_key)
+        if payload_merge:
+            sets.append("payload = payload || %s")
+            args.append(Jsonb(payload_merge))
         if status is not None:
             sets.append("status = %s")
             args.append(status)
@@ -2080,6 +2448,414 @@ class Store:
                 row = cur.fetchone()
             self._commit(conn)
         return _serialize_row(row) if row else None
+
+    # ---------- Phase 4: labelling, model performance, weekly report ----------
+
+    _LABEL_ITEM_SQL = """
+        WITH last_review AS (
+          SELECT DISTINCT ON (r.event_id) r.event_id, r.label, r.reason, r.reviewer,
+                 r.created_at
+          FROM review_feedback r
+          ORDER BY r.event_id, r.created_at DESC
+        ),
+        first_run AS (
+          SELECT DISTINCT ON (o.event_id) o.event_id, o.run_id
+          FROM observations o
+          ORDER BY o.event_id, o.id
+        )
+        SELECT e.event_id, e.type, e.confidence, e.confidence_band, e.model_version,
+               e.city_id, e.created_at,
+               lr.label AS review_label, lr.reason AS review_reason,
+               lr.reviewer, lr.created_at AS reviewed_at,
+               fr.run_id, u.upload_id AS flight_id,
+               COALESCE(u.payload->>'name', u.payload->>'run_name') AS flight_name,
+               COALESCE(u.holdout, FALSE) AS holdout,
+               tl.kind AS label_kind, tl.boxes AS label_boxes, tl.media_id AS label_media_id,
+               tl.labeller, tl.updated_at AS labelled_at,
+               EXISTS (
+                 SELECT 1 FROM event_media m
+                 WHERE m.event_id = e.event_id AND m.media_type = 'frame'
+               ) AS has_clean_frame
+        FROM events e
+        JOIN last_review lr ON lr.event_id = e.event_id
+        LEFT JOIN first_run fr ON fr.event_id = e.event_id
+        LEFT JOIN runs ru ON ru.id = fr.run_id
+        LEFT JOIN edge_video_uploads u ON u.run_dir = ru.run_dir
+        LEFT JOIN training_labels tl ON tl.event_id = e.event_id
+    """
+
+    def labelling_queue(
+        self, city_id: Optional[str] = None, done: bool = False, limit: int = 200
+    ) -> List[Dict[str, Any]]:
+        """Reviewed events, unsure first, then false alarms, then confirmations."""
+        clauses = ["tl.id IS NOT NULL" if done else "tl.id IS NULL", "lr.label <> 'resolved'"]
+        args: List[Any] = []
+        if city_id:
+            clauses.append("e.city_id = %s")
+            args.append(city_id)
+        args.append(limit)
+        order = (
+            "tl.updated_at DESC"
+            if done
+            else """CASE lr.label WHEN 'unsure' THEN 0 WHEN 'under_review' THEN 0
+                       WHEN 'wrong' THEN 1 WHEN 'false_positive' THEN 1 ELSE 2 END,
+                     lr.created_at DESC"""
+        )
+        sql = f"""{self._LABEL_ITEM_SQL}
+            WHERE {' AND '.join(clauses)}
+            ORDER BY {order}
+            LIMIT %s
+        """
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, args)
+                return [_serialize_row(r) for r in cur.fetchall()]
+
+    def labelling_item(self, event_id: str) -> Optional[Dict[str, Any]]:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"{self._LABEL_ITEM_SQL} WHERE e.event_id = %s", (event_id,))
+                row = cur.fetchone()
+        return _serialize_row(row) if row else None
+
+    def labelling_counts(self, city_id: Optional[str] = None) -> Dict[str, Any]:
+        city_clause = " AND e.city_id = %s" if city_id else ""
+        args: List[Any] = [city_id] if city_id else []
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT COUNT(DISTINCT r.event_id) AS c
+                    FROM review_feedback r
+                    JOIN events e ON e.event_id = r.event_id
+                    LEFT JOIN training_labels tl ON tl.event_id = r.event_id
+                    WHERE tl.id IS NULL AND r.label <> 'resolved'{city_clause}
+                    """,
+                    args,
+                )
+                todo = cur.fetchone()["c"]
+                cur.execute(
+                    f"""
+                    SELECT tl.kind, COUNT(*) AS c FROM training_labels tl
+                    JOIN events e ON e.event_id = tl.event_id
+                    WHERE 1=1{city_clause} GROUP BY tl.kind
+                    """,
+                    args,
+                )
+                by_kind = {r["kind"]: r["c"] for r in cur.fetchall()}
+                cur.execute(
+                    f"""
+                    SELECT b->>'cls' AS cls, COUNT(*) AS c
+                    FROM training_labels tl
+                    JOIN events e ON e.event_id = tl.event_id,
+                         jsonb_array_elements(tl.boxes) b
+                    WHERE tl.kind = 'positive'{city_clause}
+                    GROUP BY 1
+                    """,
+                    args,
+                )
+                boxes = {r["cls"]: r["c"] for r in cur.fetchall()}
+        return {"todo": todo, "by_kind": by_kind, "boxes_by_class": boxes}
+
+    def upsert_training_label(
+        self,
+        event_id: str,
+        *,
+        kind: str,
+        boxes: List[Dict[str, Any]],
+        labeller: str,
+        media_id: Optional[int],
+        city_id: Optional[str],
+    ) -> Dict[str, Any]:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO training_labels (event_id, media_id, kind, boxes, labeller, city_id)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (event_id) DO UPDATE SET
+                      media_id = EXCLUDED.media_id,
+                      kind = EXCLUDED.kind,
+                      boxes = EXCLUDED.boxes,
+                      labeller = EXCLUDED.labeller,
+                      updated_at = NOW()
+                    RETURNING id, event_id, media_id, kind, boxes, labeller, city_id,
+                              created_at, updated_at
+                    """,
+                    (event_id, media_id, kind, Jsonb(boxes), labeller, city_id),
+                )
+                row = cur.fetchone()
+            self._commit(conn)
+        return _serialize_row(row)
+
+    def delete_training_label(self, event_id: str) -> bool:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM training_labels WHERE event_id = %s", (event_id,))
+                ok = cur.rowcount > 0
+            self._commit(conn)
+        return ok
+
+    def training_export_rows(self, city_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Labels ready for export, each with its clean frame and split group."""
+        city_clause = " AND e.city_id = %s" if city_id else ""
+        args: List[Any] = [city_id] if city_id else []
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    WITH first_run AS (
+                      SELECT DISTINCT ON (o.event_id) o.event_id, o.run_id
+                      FROM observations o ORDER BY o.event_id, o.id
+                    )
+                    SELECT tl.event_id, tl.kind, tl.boxes, e.type, e.city_id,
+                           m.id AS media_id, m.path, m.object_key,
+                           fr.run_id, u.upload_id AS flight_id,
+                           COALESCE(u.holdout, FALSE) AS holdout
+                    FROM training_labels tl
+                    JOIN events e ON e.event_id = tl.event_id
+                    LEFT JOIN event_media m ON m.id = tl.media_id AND m.media_type = 'frame'
+                    LEFT JOIN first_run fr ON fr.event_id = e.event_id
+                    LEFT JOIN runs ru ON ru.id = fr.run_id
+                    LEFT JOIN edge_video_uploads u ON u.run_dir = ru.run_dir
+                    WHERE tl.kind IN ('positive', 'negative'){city_clause}
+                    ORDER BY tl.event_id
+                    """,
+                    args,
+                )
+                return [_serialize_row(r) for r in cur.fetchall()]
+
+    def set_flight_holdout(self, upload_id: str, holdout: bool) -> bool:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE edge_video_uploads SET holdout = %s, updated_at = NOW() WHERE upload_id = %s",
+                    (holdout, upload_id),
+                )
+                ok = cur.rowcount > 0
+            self._commit(conn)
+        return ok
+
+    def model_performance(self, city_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Per model version: what it found and how reviewers judged it."""
+        city_clause = " AND e.city_id = %s" if city_id else ""
+        args: List[Any] = [city_id] if city_id else []
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(e.model_version, 'unknown') AS model_version,
+                           COUNT(*) AS events,
+                           COUNT(DISTINCT o.run_id) AS runs,
+                           MIN(e.created_at) AS first_seen,
+                           MAX(e.created_at) AS last_seen,
+                           COUNT(*) FILTER (WHERE e.status IN
+                             ('confirmed', 'work_order_created', 'resolved')) AS confirmed,
+                           COUNT(*) FILTER (WHERE e.status = 'false_positive') AS false_alarms,
+                           COUNT(*) FILTER (WHERE e.status = 'under_review') AS pending
+                    FROM events e
+                    LEFT JOIN LATERAL (
+                      SELECT run_id FROM observations WHERE event_id = e.event_id LIMIT 1
+                    ) o ON TRUE
+                    WHERE 1=1{city_clause}
+                    GROUP BY 1
+                    ORDER BY MAX(e.created_at) DESC
+                    """,
+                    args,
+                )
+                rows = [_serialize_row(r) for r in cur.fetchall()]
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(e.model_version, 'unknown') AS model_version,
+                           COALESCE(r.reason, 'unspecified') AS reason, COUNT(*) AS c
+                    FROM review_feedback r JOIN events e ON e.event_id = r.event_id
+                    WHERE r.label IN ('wrong', 'false_positive'){city_clause}
+                    GROUP BY 1, 2
+                    """,
+                    args,
+                )
+                reasons: Dict[str, Dict[str, int]] = {}
+                for r in cur.fetchall():
+                    reasons.setdefault(r["model_version"], {})[r["reason"]] = r["c"]
+        for row in rows:
+            decided = row["confirmed"] + row["false_alarms"]
+            row["precision"] = round(row["confirmed"] / decided, 3) if decided else None
+            row["false_alarm_reasons"] = reasons.get(row["model_version"], {})
+        return rows
+
+    def weekly_report(self, city_id: Optional[str], start: Any, end: Any) -> Dict[str, Any]:
+        """Activity between `start` (inclusive) and `end` (exclusive) dates."""
+        ec = " AND e.city_id = %s" if city_id else ""
+        cargs: List[Any] = [city_id] if city_id else []
+        rng: List[Any] = [start, end]
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT COUNT(*) AS flights, COALESCE(SUM(bytes), 0) AS bytes,
+                           COUNT(*) FILTER (WHERE e.status = 'succeeded') AS processed
+                    FROM edge_video_uploads e
+                    WHERE e.created_at >= %s AND e.created_at < %s
+                      AND e.status NOT IN ('cancelled', 'duplicate'){ec}
+                    """,
+                    rng + cargs,
+                )
+                flights = dict(cur.fetchone())
+                cur.execute(
+                    f"""
+                    SELECT e.type, COUNT(*) AS c FROM events e
+                    WHERE e.created_at >= %s AND e.created_at < %s{ec}
+                    GROUP BY e.type ORDER BY 2 DESC
+                    """,
+                    rng + cargs,
+                )
+                new_by_type = {r["type"]: r["c"] for r in cur.fetchall()}
+                cur.execute(
+                    f"""
+                    SELECT r.label, COALESCE(r.reason, '') AS reason, COUNT(*) AS c
+                    FROM review_feedback r JOIN events e ON e.event_id = r.event_id
+                    WHERE r.created_at >= %s AND r.created_at < %s{ec}
+                    GROUP BY 1, 2
+                    """,
+                    rng + cargs,
+                )
+                labels: Dict[str, int] = {}
+                reasons: Dict[str, int] = {}
+                for r in cur.fetchall():
+                    labels[r["label"]] = labels.get(r["label"], 0) + r["c"]
+                    if r["label"] in ("wrong", "false_positive"):
+                        key = r["reason"] or "unspecified"
+                        reasons[key] = reasons.get(key, 0) + r["c"]
+                cur.execute(
+                    f"""
+                    SELECT
+                      COUNT(*) FILTER (WHERE wo.created_at >= %s AND wo.created_at < %s) AS opened,
+                      COUNT(*) FILTER (WHERE wo.status = 'resolved'
+                                        AND wo.updated_at >= %s AND wo.updated_at < %s) AS resolved,
+                      COUNT(*) FILTER (WHERE wo.status NOT IN ('resolved', 'cancelled')) AS open_now,
+                      COUNT(*) FILTER (WHERE wo.status NOT IN ('resolved', 'cancelled')
+                                        AND wo.due_date < CURRENT_DATE) AS overdue
+                    FROM work_orders wo JOIN events e ON e.event_id = wo.event_id
+                    WHERE 1=1{ec}
+                    """,
+                    rng + rng + cargs,
+                )
+                work_orders = dict(cur.fetchone())
+                cur.execute(
+                    f"""
+                    SELECT DISTINCT ON (e.event_id) e.event_id, e.type, e.lat, e.lon, e.status,
+                           e.confidence, e.confidence_band, r.created_at AS decided_at
+                    FROM review_feedback r JOIN events e ON e.event_id = r.event_id
+                    WHERE r.created_at >= %s AND r.created_at < %s
+                      AND e.status IN ('confirmed', 'work_order_created', 'resolved'){ec}
+                    ORDER BY e.event_id, r.created_at DESC
+                    """,
+                    rng + cargs,
+                )
+                confirmed_events = [_serialize_row(r) for r in cur.fetchall()]
+                cur.execute(
+                    f"""
+                    SELECT DISTINCT COALESCE(e.model_version, 'unknown') AS m FROM events e
+                    WHERE e.created_at >= %s AND e.created_at < %s{ec}
+                    """,
+                    rng + cargs,
+                )
+                models = sorted(r["m"] for r in cur.fetchall())
+        confirmed = sum(labels.get(k, 0) for k in ("correct", "confirmed", "work_order"))
+        rejected = sum(labels.get(k, 0) for k in ("wrong", "false_positive"))
+        decided = confirmed + rejected
+        return {
+            "start": str(start),
+            "end": str(end),
+            "flights": flights,
+            "new_candidates": sum(new_by_type.values()),
+            "new_by_type": new_by_type,
+            "decisions": sum(labels.values()),
+            "confirmed": confirmed,
+            "false_alarms": rejected,
+            "unsure": labels.get("unsure", 0),
+            "precision": round(confirmed / decided, 3) if decided else None,
+            "false_alarm_reasons": reasons,
+            "work_orders": work_orders,
+            "confirmed_events": confirmed_events,
+            "model_versions": models,
+        }
+
+    def set_job_progress(self, job_id: int, progress: float) -> None:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE jobs SET progress = %s WHERE id = %s",
+                    (max(0.0, min(1.0, float(progress))), job_id),
+                )
+            self._commit(conn)
+
+    def delete_edge_video_upload(self, upload_id: str) -> bool:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM edge_video_uploads WHERE upload_id = %s", (upload_id,))
+                deleted = cur.rowcount > 0
+            self._commit(conn)
+        return deleted
+
+    # A flight is an edge_video_uploads row plus its job, run and candidate count.
+    _FLIGHT_SELECT = """
+        SELECT u.upload_id, u.device_id, u.city_id, u.vehicle_id, u.route_id,
+               u.object_key, u.gps_object_key, u.bytes, u.status, u.job_id, u.run_dir,
+               u.error, u.payload, u.created_at, u.updated_at, u.holdout,
+               d.name AS device_name,
+               j.status AS job_status, j.progress AS job_progress, j.error AS job_error,
+               j.started_at AS job_started_at, j.finished_at AS job_finished_at,
+               r.id AS run_id,
+               (SELECT COUNT(DISTINCT o.event_id) FROM observations o WHERE o.run_id = r.id)
+                 AS candidates
+        FROM edge_video_uploads u
+        LEFT JOIN edge_devices d ON d.id = u.device_id
+        LEFT JOIN jobs j ON j.id = u.job_id
+        LEFT JOIN runs r ON r.run_dir = u.run_dir
+    """
+
+    def list_flights(
+        self,
+        city_id: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        clauses = ["u.status <> 'cancelled'"]
+        args: List[Any] = []
+        if city_id:
+            clauses.append("u.city_id = %s")
+            args.append(city_id)
+        if status:
+            clauses.append("u.status = %s")
+            args.append(status)
+        args.append(limit)
+        sql = f"""{self._FLIGHT_SELECT}
+            WHERE {' AND '.join(clauses)}
+            ORDER BY u.created_at DESC
+            LIMIT %s
+        """
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, args)
+                return [_serialize_row(r) for r in cur.fetchall()]
+
+    def get_flight(self, upload_id: str) -> Optional[Dict[str, Any]]:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"{self._FLIGHT_SELECT} WHERE u.upload_id = %s", (upload_id,))
+                row = cur.fetchone()
+        return _serialize_row(row) if row else None
+
+    def list_run_event_ids(self, run_id: int) -> List[str]:
+        """Events with at least one observation from this run."""
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT event_id FROM observations WHERE run_id = %s",
+                    (run_id,),
+                )
+                return [r["event_id"] for r in cur.fetchall()]
 
     def get_edge_video_upload(self, upload_id: str) -> Optional[Dict[str, Any]]:
         with self.connect() as conn:

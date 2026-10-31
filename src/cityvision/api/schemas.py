@@ -32,8 +32,15 @@ class ZonesIngestBody(BaseModel):
     path: str = Field(..., examples=["configs/zones.example.geojson"])
 
 
+REVIEW_REASONS = frozenset(
+    {"manhole", "shadow", "vehicle", "marking", "vegetation", "duplicate", "other"}
+)
+
+
 class ReviewBody(BaseModel):
-    label: str = Field(..., examples=["correct", "wrong", "work_order", "resolved"])
+    label: str = Field(..., examples=["correct", "wrong", "unsure", "work_order", "resolved"])
+    # Why a candidate was rejected; only meaningful with label "wrong".
+    reason: Optional[str] = Field(None, examples=sorted(REVIEW_REASONS))
     note: str = ""
     reviewer: str = "operator"
     unit: str = "ops"

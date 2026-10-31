@@ -44,6 +44,16 @@ class PasswordSetBody(BaseModel):
     city_id: Optional[str] = None
 
 
+@router.get("/auth/config")
+def auth_config() -> dict[str, Any]:
+    """Public: tells the web app whether to show a sign-in screen."""
+    settings = get_settings()
+    return {
+        "login_enabled": bool(settings.jwt_secret),
+        "auth_required": settings.auth_configured,
+    }
+
+
 @router.post("/auth/login")
 def login(body: LoginBody) -> dict[str, Any]:
     settings = get_settings()
