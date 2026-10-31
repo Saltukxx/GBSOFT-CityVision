@@ -11,6 +11,11 @@ class GpsFix:
     lon: float
     speed: Optional[float] = None
     heading: Optional[float] = None
+    # Camera pose, when the log has it (DJI SRT: rel_alt, gb_pitch, gb_yaw, focal_len).
+    rel_alt_m: Optional[float] = None
+    gimbal_pitch: Optional[float] = None  # degrees, -90 = straight down
+    gimbal_yaw: Optional[float] = None  # degrees clockwise from north
+    focal_len_mm: Optional[float] = None  # 35 mm equivalent
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -19,6 +24,10 @@ class GpsFix:
             "lon": self.lon,
             "speed": self.speed,
             "heading": self.heading,
+            "rel_alt_m": self.rel_alt_m,
+            "gimbal_pitch": self.gimbal_pitch,
+            "gimbal_yaw": self.gimbal_yaw,
+            "focal_len_mm": self.focal_len_mm,
         }
 
 
@@ -38,6 +47,11 @@ class Detection:
     vehicle_id: Optional[str] = None
     camera_id: Optional[str] = None
     discarded_low_conf: bool = False
+    # lat/lon above are the *target* estimate; the drone's own position is kept apart.
+    platform_lat: Optional[float] = None
+    platform_lon: Optional[float] = None
+    location_accuracy_m: Optional[float] = None
+    location_source: Optional[str] = None  # "projected" | "platform"
 
     @property
     def area(self) -> float:
@@ -112,6 +126,12 @@ class MunicipalEvent:
     norm_y: Optional[float] = None
     sample_frame: Optional[int] = None
     sample_bbox: Optional[List[float]] = None
+    # Where the drone was vs. where the object is estimated to be (plan.md §6).
+    platform_lat: Optional[float] = None
+    platform_lon: Optional[float] = None
+    location_accuracy_m: Optional[float] = None
+    location_source: Optional[str] = None
+    location_method: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

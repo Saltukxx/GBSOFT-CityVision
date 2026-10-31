@@ -42,6 +42,18 @@ export interface CityEvent {
   created_at?: string;
   updated_at?: string;
   thumb_url?: string | null;
+  payload?: EventPayload | null;
+}
+
+/** Extra fields the pipeline stores with each event. */
+export interface EventPayload {
+  platform_lat?: number | null;
+  platform_lon?: number | null;
+  location_accuracy_m?: number | null;
+  /** "projected" = placed on the ground from the camera pose; "platform" = drone position only. */
+  location_source?: "projected" | "platform" | null;
+  location_method?: string | null;
+  [key: string]: unknown;
 }
 
 export interface EventMedia {

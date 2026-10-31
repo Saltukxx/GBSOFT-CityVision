@@ -9,6 +9,7 @@ from cityvision.events.confidence import (
     severity_from_class,
 )
 from cityvision.geo.gps import haversine_m
+from cityvision.geo.project import METHOD
 from cityvision.pipeline.types import Detection, MunicipalEvent
 
 # Model B has no track_id; without a spatial cell the key collapses to class:frame
@@ -27,6 +28,10 @@ class _Cluster:
     last_ms: float
     max_conf: float
     observations: int = 0
+    platform_lat: Optional[float] = None
+    platform_lon: Optional[float] = None
+    location_accuracy_m: Optional[float] = None
+    location_source: Optional[str] = None
     vehicle_ids: Set[str] = field(default_factory=set)
     camera_ids: Set[str] = field(default_factory=set)
     track_ids: Set[int] = field(default_factory=set)
@@ -109,6 +114,10 @@ def fuse_detections(
                     track_ids={det.track_id} if det.track_id is not None else set(),
                     sample_frame=det.frame,
                     sample_bbox=list(det.bbox_xyxy),
+                    platform_lat=getattr(det, "platform_lat", None),
+                    platform_lon=getattr(det, "platform_lon", None),
+                    location_accuracy_m=getattr(det, "location_accuracy_m", None),
+                    location_source=getattr(det, "location_source", None),
                 )
             )
             continue
@@ -122,6 +131,11 @@ def fuse_detections(
             matched.sample_bbox = list(det.bbox_xyxy)
             matched.lat = det.lat if det.lat is not None else matched.lat
             matched.lon = det.lon if det.lon is not None else matched.lon
+            if det.lat is not None:
+                matched.platform_lat = getattr(det, "platform_lat", None)
+                matched.platform_lon = getattr(det, "platform_lon", None)
+                matched.location_accuracy_m = getattr(det, "location_accuracy_m", None)
+                matched.location_source = getattr(det, "location_source", None)
             matched.norm_x = nx
             matched.norm_y = ny
         if det.vehicle_id:
@@ -182,6 +196,11 @@ def fuse_detections(
                 norm_y=cluster.norm_y,
                 sample_frame=cluster.sample_frame,
                 sample_bbox=cluster.sample_bbox,
+                platform_lat=cluster.platform_lat,
+                platform_lon=cluster.platform_lon,
+                location_accuracy_m=cluster.location_accuracy_m,
+                location_source=cluster.location_source or ("platform" if cluster.lat is not None else None),
+                location_method=METHOD if cluster.location_source == "projected" else None,
             )
         )
     return events

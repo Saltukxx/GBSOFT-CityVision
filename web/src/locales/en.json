@@ -167,7 +167,11 @@
     "noHistory": "No decisions yet.",
     "historyEntry": "{{who}} — {{what}}",
     "decision": "Decision",
-    "evidenceFailed": "The evidence image could not be loaded."
+    "evidenceFailed": "The evidence image could not be loaded.",
+    "locationProjected": "Estimated from the camera angle · ±{{m}} m",
+    "locationPlatform": "Drone position only · object within ~{{m}} m",
+    "locationPlatformHint": "The flight log had no camera angle or height, so the object is somewhere in the camera's view. Upload the DJI .SRT file or link the flight to a planned route for a precise position.",
+    "dronePosition": "Drone position"
   },
   "map": {
     "title": "Map",

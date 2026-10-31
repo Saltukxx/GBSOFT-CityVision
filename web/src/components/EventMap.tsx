@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { GeoJSON, MapContainer, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { Circle, CircleMarker, GeoJSON, MapContainer, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L, { latLngBounds, type LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster";
@@ -146,16 +146,22 @@ function Markers({
   return null;
 }
 
-function FitBounds({ points, single, fitKey }: { points: LatLngTuple[]; single: boolean; fitKey: number }) {
+function FitBounds({ points, single, fitKey, radiusM }: { points: LatLngTuple[]; single: boolean; fitKey: number; radiusM?: number }) {
   const map = useMap();
   const key = points.map((p) => p.join(",")).join("|");
   useEffect(() => {
     if (!points.length) return;
-    if (single || points.length === 1) map.setView(points[0], 18);
+    // A single event with a wide uncertainty: show the whole circle.
+    if (single && points.length > 1) {
+      // Target + where the drone was: frame both, plus the accuracy circle.
+      const b = latLngBounds(points).extend(L.latLng(points[0]).toBounds((radiusM ?? 10) * 2.2));
+      map.fitBounds(b, { padding: [24, 24], maxZoom: 19 });
+    } else if (single && radiusM && radiusM > 15) map.fitBounds(L.latLng(points[0]).toBounds(radiusM * 2.4), { maxZoom: 19 });
+    else if (single || points.length === 1) map.setView(points[0], 18);
     else map.fitBounds(latLngBounds(mainCluster(points)), { padding: [48, 48], maxZoom: 18 });
     // Refit only when the set of points changes or the user asks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, single, map, fitKey]);
+  }, [key, single, map, fitKey, radiusM]);
   return null;
 }
 
@@ -210,6 +216,8 @@ interface Props {
   onSelectRoute?: (id: string) => void;
   /** Extra layers drawn inside the map (e.g. the route editor). */
   children?: ReactNode;
+  /** Location uncertainty of the single event: accuracy circle + where the drone was. */
+  uncertainty?: { lat: number; lon: number; radiusM: number; platform?: [number, number] | null } | null;
   selectedId?: string | null;
   onSelect?: (eventId: string) => void;
   /** Single-event mini map: fixed close zoom, no clustering. */
@@ -238,6 +246,7 @@ export function EventMap({
   selectedRouteId,
   onSelectRoute,
   children,
+  uncertainty,
 }: Props) {
   const { t } = useTranslation();
   const dark = useDarkScheme();
@@ -325,9 +334,40 @@ export function EventMap({
           </>
         )}
         <Markers events={located} selectedId={selectedId} onSelect={onSelect} cluster={!single && located.length > 1} />
-        <FitBounds points={points} single={single} fitKey={fitKey} />
+        <FitBounds
+          points={uncertainty?.platform ? [...points, uncertainty.platform] : points}
+          single={single}
+          fitKey={fitKey}
+          radiusM={uncertainty?.radiusM}
+        />
         <NoAttributionPrefix />
         <AutoResize />
+        {uncertainty && (
+          <>
+            <Circle
+              center={[uncertainty.lat, uncertainty.lon]}
+              radius={uncertainty.radiusM}
+              pathOptions={{ color: "#0b6e84", weight: 1.5, fillColor: "#4cc3da", fillOpacity: 0.12, dashArray: "4 4" }}
+              interactive={false}
+            />
+            {uncertainty.platform && (
+              <>
+                <Polyline
+                  positions={[uncertainty.platform, [uncertainty.lat, uncertainty.lon]]}
+                  pathOptions={{ color: "#0f1720", weight: 1.5, opacity: 0.7, dashArray: "3 5" }}
+                  interactive={false}
+                />
+                <CircleMarker
+                  center={uncertainty.platform}
+                  radius={5}
+                  pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#0f1720", fillOpacity: 1 }}
+                >
+                  <Tooltip direction="top">{t("event.dronePosition")}</Tooltip>
+                </CircleMarker>
+              </>
+            )}
+          </>
+        )}
         {children}
         {!single && <PanToSelected point={selected ? [selected.lat, selected.lon] : null} />}
       </MapContainer>

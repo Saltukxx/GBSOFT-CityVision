@@ -46,6 +46,14 @@ tracking:
   enabled: true
   tracker: bytetrack.yaml
 
+# Placing detections on the ground (src/cityvision/geo/project.py). Altitude and
+# gimbal angles come from the flight log (DJI SRT); the defaults below are used
+# only when it lacks them — a flight's planned route overrides them per flight.
+camera:
+  hfov_deg: 82.0            # horizontal field of view; DJI Mini 4 Pro / Mavic 3E wide ≈ 82–84
+  default_altitude_m: null  # metres above take-off
+  default_pitch_deg: null   # -90 = straight down
+
 gps:
   enabled: true
   # Sidecar: DJI .SRT (auto next to video) or CSV/JSON/JSONL timestamp_ms, lat, lon

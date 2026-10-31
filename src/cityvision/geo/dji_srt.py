@@ -22,6 +22,17 @@ _GPS_PAREN_RE = re.compile(
     re.IGNORECASE,
 )
 _BLOCK_SPLIT_RE = re.compile(r"\n\s*\n+")
+_NUM = r"(-?\d+(?:\.\d+)?)"
+# DJI Fly / Pilot 2 / Dock write e.g. "[rel_alt: 61.400 abs_alt: 1953.2] [gb_yaw: -30.1 gb_pitch: -89.9 ...]"
+_REL_ALT_RE = re.compile(r"rel_alt\s*:\s*" + _NUM, re.IGNORECASE)
+_GB_PITCH_RE = re.compile(r"gb_pitch\s*:\s*" + _NUM, re.IGNORECASE)
+_GB_YAW_RE = re.compile(r"gb_yaw\s*:\s*" + _NUM, re.IGNORECASE)
+_FOCAL_RE = re.compile(r"focal_len\s*:\s*" + _NUM, re.IGNORECASE)
+
+
+def _opt(rx: "re.Pattern[str]", body: str) -> Optional[float]:
+    m = rx.search(body)
+    return float(m.group(1)) if m else None
 
 
 def _srt_time_to_ms(token: str) -> Optional[float]:
@@ -53,8 +64,10 @@ def parse_dji_srt(path: str | Path) -> List[GpsFix]:
     """
     Parse DJI Fly / Dock subtitle GPS into GpsFix rows.
 
-    Timestamp is the cue start (video clock). rel_alt is ignored (not heading).
-    Zero/zero coordinates (no GPS lock) are skipped.
+    Timestamp is the cue start (video clock). Altitude above take-off (rel_alt),
+    gimbal pitch/yaw and focal length are read when present — they let us place
+    the object on the ground instead of under the drone. Zero/zero coordinates
+    (no GPS lock) are skipped.
     """
     text = Path(path).read_text(encoding="utf-8", errors="replace")
     text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
@@ -84,7 +97,17 @@ def parse_dji_srt(path: str | Path) -> List[GpsFix]:
         lat, lon = coords
         if lat == 0.0 and lon == 0.0:
             continue
-        fixes.append(GpsFix(timestamp_ms=timestamp_ms, lat=lat, lon=lon))
+        fixes.append(
+            GpsFix(
+                timestamp_ms=timestamp_ms,
+                lat=lat,
+                lon=lon,
+                rel_alt_m=_opt(_REL_ALT_RE, body),
+                gimbal_pitch=_opt(_GB_PITCH_RE, body),
+                gimbal_yaw=_opt(_GB_YAW_RE, body),
+                focal_len_mm=_opt(_FOCAL_RE, body),
+            )
+        )
 
     fixes.sort(key=lambda g: g.timestamp_ms)
     return fixes

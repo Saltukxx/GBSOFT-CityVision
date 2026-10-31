@@ -738,6 +738,12 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
   .report-map-grid { grid-template-columns: 1fr; }
 }
 
+/* Location quality line under the mini map */
+.location-quality { font-size: 0.86rem; font-weight: 500; margin-top: 0.15rem; }
+.location-projected { color: var(--s-confirmed); }
+.location-platform { color: var(--s-review); }
+.location-unknown { color: var(--muted); font-weight: 400; }
+
 /* ---------- Routes ---------- */
 .routes-page { display: grid; grid-template-columns: minmax(340px, 400px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); flex: 1 1 0; min-height: 0; }
 .routes-panel { display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem 1.25rem 1.25rem; overflow-y: auto; min-height: 0; background: var(--surface); border-right: 1px solid var(--line); position: relative; }

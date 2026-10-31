@@ -14,6 +14,7 @@ from cityvision.events.evidence import write_evidence_packs
 from cityvision.events.rejected import write_rejected_samples
 from cityvision.geo.geofence import GeofenceEngine, load_zones
 from cityvision.geo.gps import attach_gps_to_detections, discover_gps_sidecar, load_gps_sidecar
+from cityvision.geo.project import CameraModel
 from cityvision.pipeline.annotate import draw_detections
 from cityvision.pipeline.detector import DualModelDetector
 from cityvision.pipeline.export_json import JsonlWriter
@@ -45,6 +46,7 @@ def run_pipeline(
     stride: Optional[int] = None,
     profile: Optional[str] = None,
     progress: Optional[Callable[[float], None]] = None,
+    camera: Optional[Dict[str, Any]] = None,
 ) -> Path:
     """`progress`, when given, is called with the fraction of frames processed (0..1)."""
     cfg = pipeline_cfg or load_pipeline_config(
@@ -65,6 +67,14 @@ def run_pipeline(
     det_cfg = cfg.get("detection", {})
     track_cfg = cfg.get("tracking", {})
     gps_cfg = cfg.get("gps", {})
+    # Camera model for placing detections on the ground; `camera` (e.g. the planned
+    # route's altitude and gimbal angle) fills in what the flight log lacks.
+    cam_cfg = {**(cfg.get("camera") or {}), **{k: v for k, v in (camera or {}).items() if v is not None}}
+    camera_model = CameraModel(
+        hfov_deg=float(cam_cfg.get("hfov_deg", 82.0)),
+        default_altitude_m=_opt_float(cam_cfg.get("default_altitude_m")),
+        default_pitch_deg=_opt_float(cam_cfg.get("default_pitch_deg")),
+    )
     geo_cfg = cfg.get("geofence", {})
     traffic_cfg = cfg.get("traffic", {})
     events_cfg = cfg.get("events", {})
@@ -209,6 +219,8 @@ def run_pipeline(
                     dets,
                     gps_fixes,
                     max_gap_ms=float(gps_cfg.get("max_interp_gap_ms", 2000)),
+                    image_size=(reader.width, reader.height),
+                    camera=camera_model,
                 )
 
             if geofence is not None:
@@ -335,3 +347,7 @@ def run_pipeline(
         )
 
     return out
+
+
+def _opt_float(v: Any) -> Optional[float]:
+    return None if v in (None, "") else float(v)

@@ -71,14 +71,28 @@ export function EventPanel({ eventId, onDecide, busy, keyboard = false, variant 
 
 function Location({ ev }: { ev: EventDetail }) {
   const { t, i18n } = useTranslation();
+  const p = ev.payload ?? {};
+  const source = p.location_source ?? null;
+  const accuracy = p.location_accuracy_m ?? null;
+  const platform: [number, number] | null =
+    source === "projected" && typeof p.platform_lat === "number" && typeof p.platform_lon === "number" ? [p.platform_lat, p.platform_lon] : null;
+  const uncertainty =
+    hasLocation(ev) && accuracy ? { lat: ev.lat, lon: ev.lon, radiusM: accuracy, platform } : null;
   return (
     <section className="card">
       <h3>{t("event.location")}</h3>
       {hasLocation(ev) ? (
         <>
-          <EventMap events={[ev]} selectedId={ev.event_id} single className="map-mini" />
+          <EventMap events={[ev]} selectedId={ev.event_id} single className="map-mini" uncertainty={uncertainty} />
           <p className="mono small">{formatCoord(ev.lat, ev.lon, i18n.language)}</p>
-          <p className="muted small">{t("event.locationNote")}</p>
+          <p className={`location-quality location-${source ?? "unknown"}`}>
+            {source === "projected"
+              ? t("event.locationProjected", { m: Math.round(accuracy ?? 0) })
+              : source === "platform"
+                ? t("event.locationPlatform", { m: Math.round(accuracy ?? 0) })
+                : t("event.locationNote")}
+          </p>
+          {source === "platform" && <p className="muted small">{t("event.locationPlatformHint")}</p>}
         </>
       ) : (
         <p className="muted">{t("event.noLocation")}</p>

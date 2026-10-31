@@ -95,6 +95,18 @@ def run_job(job_id: int) -> None:
         reset_tenant_city(token)
 
 
+def _route_camera(store: Store, route_id: Optional[str]) -> Dict[str, Any]:
+    """The planned route's altitude/gimbal, used when the flight log lacks them."""
+    if not route_id:
+        return {}
+    try:
+        route = store.get_route(str(route_id)) or {}
+    except Exception:  # noqa: BLE001 — never fail an analysis over this
+        return {}
+    props = route.get("props") or {}
+    return {"default_altitude_m": props.get("altitude_m"), "default_pitch_deg": props.get("gimbal_deg")}
+
+
 def _progress_reporter(store: Store, job_id: Optional[int], offset: float = 0.0):
     """Map pipeline progress (0..1) into [offset, 0.97] and write it at most every 2%."""
     if job_id is None:
@@ -156,6 +168,7 @@ def _run_analyze_video(
         camera_id=str(camera_id) if camera_id else None,
         city_id=str(city_id) if city_id else None,
         progress=_progress_reporter(store, job_id, float(payload.get("progress_offset") or 0.0)),
+        camera=_route_camera(store, payload.get("route_id")),
     )
     # Ensure city/route land in summary for ingest
     summary_path = out_dir / "summary.json"
