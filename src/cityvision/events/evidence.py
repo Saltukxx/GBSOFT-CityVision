@@ -75,6 +75,10 @@ def write_evidence_packs(
                         ],
                     )
                 cv2.imwrite(str(ed / "event.jpg"), still)
+                if still is not frame:
+                    # Unannotated copy for training: a drawn box in a training image
+                    # would teach the model to find our own rectangle.
+                    cv2.imwrite(str(ed / "frame_clean.jpg"), frame)
             if save_crop and event.sample_bbox:
                 x1, y1, x2, y2 = [int(v) for v in event.sample_bbox]
                 x1, y1 = max(0, x1), max(0, y1)

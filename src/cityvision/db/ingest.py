@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -321,15 +322,22 @@ def _ingest_evidence_media(store: Store, ev: Dict[str, Any]) -> int:
     root = Path(ed)
     if not root.is_dir():
         return 0
+    # Event IDs repeat across runs (POT-00001 in every run), so each run's
+    # evidence gets its own folder; a shared key let later runs overwrite
+    # earlier files while the database still pointed at them.
+    run_tag = hashlib.sha1(str(root.resolve()).encode()).hexdigest()[:10]
     obj = get_object_store()
     n = 0
     for path in sorted(root.iterdir()):
         if not path.is_file():
             continue
         media_type, ctype = _MEDIA_MAP.get(path.suffix.lower(), ("other", None))
-        if path.name.lower().startswith("crop"):
+        name = path.name.lower()
+        if "crop" in name:  # object_crop.jpg
             media_type = "crop"
-        key = f"evidence/{event_id}/{path.name}"
+        elif name.startswith("frame_clean"):
+            media_type = "frame"  # evidence frame without drawn boxes (training)
+        key = f"evidence/{event_id}/{run_tag}/{path.name}"
         try:
             obj.put_file(key, path)
         except OSError:
