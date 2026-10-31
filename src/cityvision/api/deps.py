@@ -228,7 +228,7 @@ def tenant_guc_value(principal: Principal, requested_city_id: Optional[str] = No
     return principal.city_id or TENANT_ALL
 
 
-def bind_tenant(
+async def bind_tenant(
     request: Request,
     principal: Principal = Depends(get_principal),
 ):
@@ -236,6 +236,12 @@ def bind_tenant(
 
     BaseHTTPMiddleware can lose ContextVars across call_next; this dependency
     is what actually scopes Store.connect() for an authenticated request.
+
+    It must be *async*: FastAPI runs a sync generator dependency's setup and
+    teardown in separate worker threads, each with a copied context, so the
+    value never reached the route and the reset raised "created in a different
+    Context". An async generator runs in the request task's own context, which
+    sync routes then inherit when they are sent to the threadpool.
     """
     if not get_settings().strict_tenancy:
         yield
