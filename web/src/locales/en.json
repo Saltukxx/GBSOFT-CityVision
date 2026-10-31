@@ -292,7 +292,8 @@
       "succeeded": "Ready",
       "failed": "Failed",
       "cancelled": "Cancelled",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "stopped": "Stopped"
     },
     "processing": "Processing {{percent}}%",
     "candidates_one": "{{count}} candidate",
@@ -381,6 +382,15 @@
       "good": "Followed the plan",
       "partial": "Partly followed",
       "poor": "Did not follow the plan"
+    },
+    "actions": {
+      "stop": "Stop processing",
+      "stopping": "Stopping…",
+      "retry": "Retry processing",
+      "stopHint": "Stops within about half a minute. You can run it again later.",
+      "failedStop": "Could not stop processing.",
+      "failedRetry": "Could not start processing again.",
+      "uploadIncomplete": "The upload never finished. Upload the video again."
     }
   },
   "workOrders": {

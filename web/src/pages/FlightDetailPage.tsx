@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RotateCcw, Square } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../api/client";
+import { ApiError, api } from "../api/client";
+import { useToast } from "../components/Toast";
 import { ACTIVE_FLIGHT_STATUSES } from "../api/types";
 import { useCurrentUser } from "../auth/AuthContext";
 import type { Adherence } from "../api/types";
@@ -37,6 +38,23 @@ export function FlightDetailPage() {
   });
   const { user, canDecide } = useCurrentUser();
   const qc = useQueryClient();
+  const toast = useToast();
+  const control = useMutation({
+    mutationFn: (action: "stop" | "retry") => (action === "stop" ? api.stopFlight(flightId) : api.retryFlight(flightId)),
+    onError: (err, action) =>
+      toast.show(
+        err instanceof ApiError && err.detail === "upload_incomplete"
+          ? t("flights.actions.uploadIncomplete")
+          : action === "stop"
+            ? t("flights.actions.failedStop")
+            : t("flights.actions.failedRetry"),
+        { tone: "error" },
+      ),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["flight", flightId] });
+      void qc.invalidateQueries({ queryKey: ["flights"] });
+    },
+  });
   // Shown value flips on click; cleared once the server's copy is back.
   const [holdoutShown, setHoldoutShown] = useState<boolean | null>(null);
   const holdout = useMutation({
@@ -103,7 +121,23 @@ export function FlightDetailPage() {
         )}
       </header>
 
-      {f.status === "failed" && f.error && (
+      {canDecide && (["received", "queued", "analyzing"].includes(f.status) || ["failed", "stopped"].includes(f.status)) && (
+        <div className="flight-controls">
+          {["received", "queued", "analyzing"].includes(f.status) ? (
+            <>
+              <button type="button" className="btn" disabled={control.isPending || f.status === "received"} onClick={() => control.mutate("stop")}>
+                <Square size={14} aria-hidden="true" /> {control.isPending ? t("flights.actions.stopping") : t("flights.actions.stop")}
+              </button>
+              <span className="muted small">{t("flights.actions.stopHint")}</span>
+            </>
+          ) : (
+            <button type="button" className="btn btn-primary" disabled={control.isPending} onClick={() => control.mutate("retry")}>
+              <RotateCcw size={15} aria-hidden="true" /> {t("flights.actions.retry")}
+            </button>
+          )}
+        </div>
+      )}
+      {(f.status === "failed" || f.status === "stopped") && f.error && f.error !== "Stopped by user" && (
         <p className="form-error" role="alert">
           {f.error}
         </p>

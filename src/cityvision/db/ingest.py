@@ -49,6 +49,9 @@ def ingest_run_dir(
         "route_id": summary.get("route_id"),
         "city_id": city_id or summary.get("city_id") or settings.default_city,
     }
+    # A route deleted since the flight was linked must not fail the whole ingest.
+    if meta["route_id"] and not store.get_route(str(meta["route_id"])):
+        meta["route_id"] = None
 
     det_path = run_dir / "detections.jsonl"
     class_counts: Dict[tuple[str, str], Dict[str, Any]] = defaultdict(

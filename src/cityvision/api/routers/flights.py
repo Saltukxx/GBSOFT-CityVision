@@ -68,7 +68,7 @@ def _present(row: dict[str, Any]) -> dict[str, Any]:
         "bytes": row.get("bytes"),
         "status": status,
         "progress": progress,
-        "error": row.get("error") or row.get("job_error"),
+        "error": row.get("error") or row.get("job_error") or None,
         "has_telemetry": bool(row.get("gps_object_key") or payload.get("has_telemetry")),
         "trajectory_warning": payload.get("trajectory_warning"),
         "duplicate_of": payload.get("duplicate_of"),
@@ -156,6 +156,65 @@ def get_flight(upload_id: str, principal: Principal = Depends(get_principal)) ->
         store.route_adherence(str(row["route_id"]), track) if row.get("route_id") and len(track) > 1 else None
     )
     return out
+
+
+@router.post("/{upload_id}/stop")
+def stop_processing(upload_id: str, principal: Principal = Depends(require_operator)) -> dict[str, Any]:
+    """Stop a flight that is waiting for or in processing."""
+    store = get_store()
+    row = _flight_or_404(upload_id, principal)
+    if row.get("status") not in ("received", "queued", "analyzing") or not row.get("job_id"):
+        raise HTTPException(status_code=409, detail="not_processing")
+    job_status = store.request_job_cancel(int(row["job_id"]))
+    if job_status == "cancelled":  # was still waiting: stopped at once
+        store.update_edge_video_upload(upload_id, status="stopped", error="Stopped by user")
+    store.add_audit(
+        actor=principal.username,
+        action="flight_stop",
+        entity_type="flight",
+        entity_id=upload_id,
+        city_id=row.get("city_id"),
+    )
+    return _present(store.get_flight(upload_id) or {})
+
+
+@router.post("/{upload_id}/retry")
+def retry_processing(upload_id: str, principal: Principal = Depends(require_operator)) -> dict[str, Any]:
+    """Run a failed or stopped flight again, from wherever it got to."""
+    store = get_store()
+    row = _flight_or_404(upload_id, principal)
+    if row.get("status") not in ("failed", "stopped"):
+        raise HTTPException(status_code=409, detail="not_retryable")
+    full = store.get_edge_video_upload(upload_id) or {}
+    payload = full.get("payload") or {}
+    if str(full.get("checksum", "")).startswith(fu.PENDING_CHECKSUM_PREFIX):
+        # Never reached storage: re-assemble from the chunks, if they are still here.
+        if fu.missing_chunks(upload_id, int(row.get("bytes") or 0)):
+            raise HTTPException(status_code=409, detail="upload_incomplete")
+        job_type, job_payload = "flight_upload", {"upload_id": upload_id, "city_id": row.get("city_id")}
+    else:
+        job_type, job_payload = "analyze_video", {
+            "upload_id": upload_id,
+            "object_key": full["object_key"],
+            "gps_object_key": full.get("gps_object_key"),
+            "city_id": row.get("city_id"),
+            "vehicle_id": full.get("vehicle_id"),
+            "route_id": full.get("route_id"),
+            "camera_id": payload.get("camera_id") or "AERIAL",
+            "run_name": payload.get("name") or payload.get("run_name") or upload_id[:12],
+        }
+    store.update_edge_video_upload(upload_id, status="queued" if job_type == "analyze_video" else "received", error="")
+    job_id, _ = enqueue_job(store, job_type, job_payload)
+    store.update_edge_video_upload(upload_id, job_id=job_id)
+    store.add_audit(
+        actor=principal.username,
+        action="flight_retry",
+        entity_type="flight",
+        entity_id=upload_id,
+        detail={"job_id": job_id, "job_type": job_type},
+        city_id=row.get("city_id"),
+    )
+    return _present(store.get_flight(upload_id) or {})
 
 
 class RouteAssign(BaseModel):

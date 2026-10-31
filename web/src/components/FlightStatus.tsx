@@ -10,6 +10,7 @@ const TONE: Record<string, string> = {
   failed: "bad",
   cancelled: "muted",
   duplicate: "muted",
+  stopped: "waiting",
 };
 
 export function FlightStatus({ flight, showBar = false }: { flight: Pick<Flight, "status" | "progress">; showBar?: boolean }) {

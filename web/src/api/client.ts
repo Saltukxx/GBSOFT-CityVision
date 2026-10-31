@@ -191,6 +191,10 @@ export const api = {
   flightTracks: (days = 30, routeId?: string) =>
     request<FlightTrack[]>(`/api/flights/tracks?days=${days}${routeId ? `&route_id=${encodeURIComponent(routeId)}` : ""}`),
 
+  stopFlight: (id: string) => request<Flight>(`/api/flights/${encodeURIComponent(id)}/stop`, { method: "POST" }),
+
+  retryFlight: (id: string) => request<Flight>(`/api/flights/${encodeURIComponent(id)}/retry`, { method: "POST" }),
+
   assignRoute: (flightId: string, routeId: string | null) =>
     request<{ route_id: string | null }>(`/api/flights/${encodeURIComponent(flightId)}/route`, {
       method: "PATCH",

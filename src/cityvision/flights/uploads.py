@@ -126,8 +126,12 @@ def finalize_and_analyze(
     payload: Dict[str, Any],
     job_id: Optional[int],
     analyze: Callable[[Store, Dict[str, Any], Optional[int]], Dict[str, Any]],
+    check: Callable[[], None] = lambda: None,
 ) -> Dict[str, Any]:
-    """Job body for `flight_upload`: assemble → dedupe → store → analyze."""
+    """Job body for `flight_upload`: assemble → dedupe → store → analyze.
+
+    `check` raises if the user asked to stop; it is called between stages.
+    """
     from cityvision.storage import get_object_store
 
     upload_id = str(payload["upload_id"])
@@ -145,6 +149,7 @@ def finalize_and_analyze(
         video = folder / f"video{Path(str(row['object_key'])).suffix or '.mp4'}"
         checksum = assemble(upload_id, size, video)
         report(0.03)
+        check()
 
         existing = store.find_video_by_checksum(str(row["device_id"]), checksum)
         if existing and existing.get("upload_id") != upload_id:
@@ -169,6 +174,7 @@ def finalize_and_analyze(
         )
         shutil.rmtree(folder, ignore_errors=True)
         report(0.08)
+        check()
 
         analyze_payload = {
             "upload_id": upload_id,
@@ -183,5 +189,8 @@ def finalize_and_analyze(
         }
         return analyze(store, analyze_payload, job_id)
     except Exception as exc:
-        store.update_edge_video_upload(upload_id, status="failed", error=str(exc))
+        from cityvision.workers.jobs import JobCancelled
+
+        if not isinstance(exc, JobCancelled):
+            store.update_edge_video_upload(upload_id, status="failed", error=str(exc))
         raise

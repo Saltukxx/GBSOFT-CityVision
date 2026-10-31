@@ -112,7 +112,8 @@ export type FlightStatus =
   | "succeeded"
   | "failed"
   | "cancelled"
-  | "duplicate";
+  | "duplicate"
+  | "stopped";
 
 export const ACTIVE_FLIGHT_STATUSES: FlightStatus[] = ["uploading", "received", "queued", "analyzing"];
 

@@ -100,3 +100,8 @@ def test_tracks_and_adherence(city, tmp_path):  # noqa: F811
     assert off["coverage"] < 0.05 and off["off_route"] == 1.0 and off["max_deviation_m"] > 250
 
     assert client.patch(f"/api/flights/{fid}/route", json={"route_id": "nope"}, headers=op).status_code == 404
+
+    # Deleting the route unlinks the flight instead of leaving a dangling id.
+    admin = _auth(client, city["admin"], "admin-pass-1")
+    assert client.delete(f"/api/routes/{rid}", headers=admin).status_code == 204
+    assert store.get_edge_video_upload(fid)["route_id"] is None

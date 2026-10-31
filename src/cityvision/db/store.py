@@ -1406,8 +1406,11 @@ class Store:
         return self.get_route(route_id) or {}
 
     def delete_route(self, route_id: str) -> bool:
+        """Delete a route and unlink everything that pointed at it (flights keep their tracks)."""
         with self.connect() as conn:
             with conn.cursor() as cur:
+                for table in ("edge_video_uploads", "vehicles", "runs"):
+                    cur.execute(f"UPDATE {table} SET route_id = NULL WHERE route_id = %s", (route_id,))
                 cur.execute("DELETE FROM routes WHERE id = %s", (route_id,))
                 ok = cur.rowcount > 0
             self._commit(conn)
@@ -1769,7 +1772,8 @@ class Store:
                 cur.execute(
                     """
                     SELECT id, job_type, status, payload, result, error, city_id,
-                           progress, created_at, started_at, finished_at
+                           progress, created_at, started_at, finished_at,
+                           heartbeat_at, cancel_requested, attempts
                     FROM jobs WHERE id = %s
                     """,
                     (job_id,),
@@ -1803,8 +1807,9 @@ class Store:
                 cur.execute(
                     """
                     UPDATE jobs
-                    SET status = 'running', started_at = NOW(), error = NULL
-                    WHERE id = %s AND status = 'queued'
+                    SET status = 'running', started_at = NOW(), heartbeat_at = NOW(),
+                        error = NULL, attempts = attempts + 1
+                    WHERE id = %s AND status = 'queued' AND NOT cancel_requested
                     RETURNING id
                     """,
                     (job_id,),
@@ -1817,24 +1822,73 @@ class Store:
         """Backward-compatible alias for claim_job."""
         return self.claim_job(job_id)
 
-    def reclaim_stale_jobs(self, older_than_minutes: int = 30) -> List[int]:
-        """Reset stuck running jobs back to queued. Returns reclaimed job ids."""
+    def reclaim_stale_jobs(self, older_than_minutes: int = 5, max_attempts: int = 3) -> List[int]:
+        """Re-queue running jobs whose worker went silent (no heartbeat).
+
+        A job that has already used `max_attempts` is failed instead, so a job
+        that crashes its worker can't loop forever. Returns re-queued job ids.
+        """
+        stale = """
+            status = 'running'
+            AND COALESCE(heartbeat_at, started_at) < NOW() - (%s || ' minutes')::interval
+        """
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     UPDATE jobs
-                    SET status = 'queued', started_at = NULL, error = 'reclaimed: stale running'
-                    WHERE status = 'running'
-                      AND started_at IS NOT NULL
-                      AND started_at < NOW() - (%s || ' minutes')::interval
+                    SET status = 'failed', finished_at = NOW(),
+                        error = 'worker stopped responding ' || attempts || ' times; giving up'
+                    WHERE {stale} AND attempts >= %s
+                    """,
+                    (str(int(older_than_minutes)), max_attempts),
+                )
+                cur.execute(
+                    f"""
+                    UPDATE jobs
+                    SET status = 'queued', started_at = NULL, heartbeat_at = NULL,
+                        error = 'reclaimed: worker stopped responding'
+                    WHERE {stale} AND attempts < %s AND NOT cancel_requested
                     RETURNING id
                     """,
-                    (str(int(older_than_minutes)),),
+                    (str(int(older_than_minutes)), max_attempts),
                 )
                 rows = cur.fetchall()
             self._commit(conn)
         return [int(r["id"]) for r in rows]
+
+    def job_heartbeat(self, job_id: int) -> bool:
+        """Mark a running job alive. Returns True if a cancel has been requested."""
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE jobs SET heartbeat_at = NOW() WHERE id = %s RETURNING cancel_requested",
+                    (job_id,),
+                )
+                row = cur.fetchone()
+            self._commit(conn)
+        return bool(row and row["cancel_requested"])
+
+    def request_job_cancel(self, job_id: int) -> Optional[str]:
+        """Ask a job to stop. Queued jobs stop at once; running ones at their next check.
+
+        Returns the job's status after the request, or None if it doesn't exist.
+        """
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE jobs SET cancel_requested = TRUE,
+                      status = CASE WHEN status = 'queued' THEN 'cancelled' ELSE status END,
+                      finished_at = CASE WHEN status = 'queued' THEN NOW() ELSE finished_at END
+                    WHERE id = %s
+                    RETURNING status
+                    """,
+                    (job_id,),
+                )
+                row = cur.fetchone()
+            self._commit(conn)
+        return row["status"] if row else None
 
     def mark_job_done(
         self,
@@ -1843,6 +1897,7 @@ class Store:
         ok: bool,
         result: Optional[Dict[str, Any]] = None,
         error: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> None:
         with self.connect() as conn:
             with conn.cursor() as cur:
@@ -1856,7 +1911,7 @@ class Store:
                     WHERE id = %s
                     """,
                     (
-                        "succeeded" if ok else "failed",
+                        status or ("succeeded" if ok else "failed"),
                         Jsonb(result) if result is not None else None,
                         error,
                         job_id,

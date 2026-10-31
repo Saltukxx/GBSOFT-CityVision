@@ -13,6 +13,43 @@ from cityvision.tenant import TENANT_ALL, reset_tenant_city, set_tenant_city
 
 log = logging.getLogger(__name__)
 
+HEARTBEAT_SECONDS = 20
+STALE_MINUTES = 5  # no heartbeat for this long → the worker is gone
+
+
+class JobCancelled(Exception):
+    """Raised inside a job when a user asked it to stop."""
+
+
+class _Heartbeat:
+    """Background thread: keep a running job marked alive and notice cancel requests."""
+
+    def __init__(self, job_id: int):
+        self.job_id = job_id
+        self.cancelled = threading.Event()
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True, name=f"cv-hb-{job_id}")
+
+    def _run(self) -> None:
+        store = Store()
+        while not self._stop.wait(HEARTBEAT_SECONDS):
+            try:
+                if store.job_heartbeat(self.job_id):
+                    self.cancelled.set()
+            except Exception:  # noqa: BLE001 — a missed beat is retried next time
+                log.debug("heartbeat failed for job %s", self.job_id, exc_info=True)
+
+    def __enter__(self) -> "_Heartbeat":
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+
+    def check(self) -> None:
+        if self.cancelled.is_set():
+            raise JobCancelled()
+
 
 def enqueue_job(store: Store, job_type: str, payload: Dict[str, Any]) -> Tuple[int, bool]:
     """
@@ -52,7 +89,7 @@ def enqueue_job(store: Store, job_type: str, payload: Dict[str, Any]) -> Tuple[i
 
 def run_job(job_id: int) -> None:
     store = Store()
-    store.reclaim_stale_jobs(older_than_minutes=30)
+    store.reclaim_stale_jobs(older_than_minutes=STALE_MINUTES)
     row = store.get_job(job_id)
     if not row:
         return
@@ -65,6 +102,7 @@ def run_job(job_id: int) -> None:
     payload = row.get("payload") or {}
     job_city = row.get("city_id") or payload.get("city_id")
     token = set_tenant_city(str(job_city) if job_city else TENANT_ALL)
+    hb = _Heartbeat(job_id).__enter__()
     try:
         try:
             if job_type == "ingest_run":
@@ -76,22 +114,30 @@ def run_job(job_id: int) -> None:
                     payload["path"], store=store, city_id=job_city
                 )
             elif job_type == "analyze_video":
-                result = _run_analyze_video(store, payload, job_id)
+                result = _run_analyze_video(store, payload, job_id, hb)
             elif job_type == "flight_upload":
                 from cityvision.flights.uploads import finalize_and_analyze
 
-                result = finalize_and_analyze(store, payload, job_id, _run_analyze_video)
+                result = finalize_and_analyze(
+                    store, payload, job_id, lambda st, p, j: _run_analyze_video(st, p, j, hb), check=hb.check
+                )
             else:
                 raise ValueError(f"unknown job_type: {job_type}")
             store.mark_job_done(job_id, ok=True, result=result)
             _sync_edge_upload(store, payload, status="succeeded", error=None)
             _sync_edge_video_upload(store, payload, status="succeeded", error=None)
+        except JobCancelled:
+            log.info("job %s stopped on request", job_id)
+            store.mark_job_done(job_id, ok=False, status="cancelled", error="Stopped by user")
+            if payload.get("upload_id"):
+                store.update_edge_video_upload(str(payload["upload_id"]), status="stopped", error="Stopped by user")
         except Exception as exc:  # noqa: BLE001
             log.exception("job %s failed", job_id)
             store.mark_job_done(job_id, ok=False, error=str(exc))
             _sync_edge_upload(store, payload, status="failed", error=str(exc))
             _sync_edge_video_upload(store, payload, status="failed", error=str(exc))
     finally:
+        hb.__exit__()
         reset_tenant_city(token)
 
 
@@ -107,13 +153,20 @@ def _route_camera(store: Store, route_id: Optional[str]) -> Dict[str, Any]:
     return {"default_altitude_m": props.get("altitude_m"), "default_pitch_deg": props.get("gimbal_deg")}
 
 
-def _progress_reporter(store: Store, job_id: Optional[int], offset: float = 0.0):
-    """Map pipeline progress (0..1) into [offset, 0.97] and write it at most every 2%."""
+def _progress_reporter(
+    store: Store, job_id: Optional[int], offset: float = 0.0, hb: Optional["_Heartbeat"] = None
+):
+    """Map pipeline progress (0..1) into [offset, 0.97] and write it at most every 2%.
+
+    Also the pipeline's cancellation point: raises JobCancelled once a stop is requested.
+    """
     if job_id is None:
         return None
     last = [-1.0]
 
     def report(fraction: float) -> None:
+        if hb is not None:
+            hb.check()
         value = offset + (0.97 - offset) * fraction
         if value - last[0] >= 0.02:
             last[0] = value
@@ -126,7 +179,7 @@ def _progress_reporter(store: Store, job_id: Optional[int], offset: float = 0.0)
 
 
 def _run_analyze_video(
-    store: Store, payload: Dict[str, Any], job_id: Optional[int] = None
+    store: Store, payload: Dict[str, Any], job_id: Optional[int] = None, hb: Optional[_Heartbeat] = None
 ) -> Dict[str, Any]:
     """Memphis: download video (+ GPS), run_pipeline, ingest events."""
     from cityvision.pipeline.runner import run_pipeline
@@ -167,7 +220,7 @@ def _run_analyze_video(
         vehicle_id=str(vehicle_id) if vehicle_id else None,
         camera_id=str(camera_id) if camera_id else None,
         city_id=str(city_id) if city_id else None,
-        progress=_progress_reporter(store, job_id, float(payload.get("progress_offset") or 0.0)),
+        progress=_progress_reporter(store, job_id, float(payload.get("progress_offset") or 0.0), hb),
         camera=_route_camera(store, payload.get("route_id")),
     )
     # Ensure city/route land in summary for ingest
@@ -246,7 +299,7 @@ def _sync_edge_video_upload(
 def startup_reclaim(older_than_minutes: int = 30) -> List[int]:
     """Reclaim stuck running jobs and re-queue them on Redis when available."""
     store = Store()
-    ids = store.reclaim_stale_jobs(older_than_minutes=older_than_minutes)
+    ids = store.reclaim_stale_jobs(older_than_minutes=min(older_than_minutes, STALE_MINUTES))
     if not ids:
         return []
     log.info("Reclaimed %s stale job(s): %s", len(ids), ids)
