@@ -104,3 +104,11 @@ outreach-email-pack-*.md
 
 # Large landing media
 src/cityvision/api/static/landing/*.mp4
+
+# Local build output and large eval prediction dumps
+.presentation-build/
+docs/eval/pretrained-compare/*.preds.json
+# Sales research/outreach (contact data) and client-specific decks stay local
+docs/sales/
+docs/sunum/europe/
+docs/sunum/helsinki/
