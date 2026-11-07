@@ -59,8 +59,12 @@ EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 # Rare classes get duplicated in the train split so 10 crack boxes are not lost in the noise
 RARE_CLASSES = (0, 1)
 RARE_OVERSAMPLE = 5
-# Hold-out clip: never trained on, used by scripts/eval_aerial.py
-TEST_PREFIX = "clip3"
+# Hold-out clips: never trained on, used by scripts/eval_aerial.py. clip3 was the first;
+# clip5/clip6/clip14 were never labeled or trained on, and clip25 (25 Agu 4.MP4) was
+# pixel-checked against every extracted frame on 3 Nov 2026 (no match). Trailing "_"
+# keeps clip3 from also catching clip30+.
+TEST_PREFIX = ("clip3_", "clip5_", "clip6_", "clip14_", "clip25_")
+TEST_LABEL = "/".join(p.rstrip("_") for p in TEST_PREFIX)
 # Every other clip is cut on its own timeline instead of interleaved: the tail goes to val,
 # and GUARD frames at the cut are dropped so no val frame borders a train frame.
 VAL_TAIL_FRAC = 0.2
@@ -718,7 +722,7 @@ def export_yolo() -> str:
         "path: data/datasets/model_b_aerial\n"
         "train: images/train\n"
         "val: images/val\n"
-        f"# hold-out (scripts/eval_aerial.py): {TEST_PREFIX} → images/test\n"
+        f"# hold-out (scripts/eval_aerial.py): {TEST_LABEL} → images/test\n"
         "test: images/test\n"
         f"# split_manifest train={manifest['train']}\n"
         f"# split_manifest val={manifest['val']}\n"
@@ -736,7 +740,7 @@ def export_yolo() -> str:
         f"guard dropped={dropped}, external train added={external_added}) boxes={stats}"
     )
     generated = (
-        f"Split is clip-based: `{TEST_PREFIX}` = hold-out test; every other clip is cut on "
+        f"Split is clip-based: `{TEST_LABEL}` = hold-out test; every other clip is cut on "
         f"its timeline (last {int(VAL_TAIL_FRAC * 100)}% to val, {GUARD_FRAMES} frame(s) at "
         "the cut dropped).\n"
         "Frames listed in `background.txt` export as empty labels (hard negatives), capped at "

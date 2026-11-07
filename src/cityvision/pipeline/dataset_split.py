@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Tuple
 
 TRAIN = "train"
 VAL = "val"
@@ -34,14 +34,15 @@ def timestamp_of(name: str) -> int:
 def assign_splits(
     names: Iterable[str],
     *,
-    test_prefix: str = "clip3",
+    test_prefix: str | Tuple[str, ...] | None = "clip3",
     val_tail_frac: float = 0.2,
     guard_frames: int = 1,
 ) -> Dict[str, str]:
     """
     Map each frame name to train / val / test / drop.
 
-    Frames whose name starts with `test_prefix` become the hold-out test set. Every
+    Frames whose name starts with `test_prefix` (one prefix or a tuple of them) become
+    the hold-out test set. Every
     other clip is cut on its own timeline: the last `val_tail_frac` goes to val and
     `guard_frames` frames right before the cut are dropped, so no val frame borders a
     train frame. Each flight therefore appears in both train and val.

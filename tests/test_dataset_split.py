@@ -23,6 +23,14 @@ def test_test_prefix_is_held_out_whole():
     assert "test" not in {splits[n] for n in _frames("clip1", 10)}
 
 
+def test_several_hold_out_prefixes():
+    names = _frames("clip3", 5) + _frames("clip25", 5) + _frames("clip30", 10) + _frames("clip1", 10)
+    splits = assign_splits(names, test_prefix=("clip3_", "clip25_"))
+    assert {splits[n] for n in _frames("clip3", 5) + _frames("clip25", 5)} == {"test"}
+    # trailing "_" keeps clip3 from swallowing clip30
+    assert "test" not in {splits[n] for n in _frames("clip30", 10) + _frames("clip1", 10)}
+
+
 def test_tail_goes_to_val_with_guard_gap():
     names = _frames("clip1", 10)
     splits = assign_splits(names, test_prefix=None, val_tail_frac=0.2, guard_frames=1)
