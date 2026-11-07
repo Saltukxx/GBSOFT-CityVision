@@ -1,0 +1,16 @@
+{
+  "fps": 60,
+  "bpm": 114.99,
+  "musicStart": 84.018,
+  "note": "Lengths in beats. Each round: title 5 beats, countdown 6 beats (3.1 s), reveal 4 beats. marks = beats from a round's start.",
+  "marks": {"COUNT": 5, "REVEAL": 11},
+  "scenes": [
+    ["hook", 8, "cut"],
+    ["r1", 15, "irisTimer"],
+    ["r2", 15, "whip"],
+    ["r3", 15, "whip"],
+    ["score", 5, "irisCenter"],
+    ["map", 7, "push"],
+    ["end", 7, "zoom"]
+  ]
+}

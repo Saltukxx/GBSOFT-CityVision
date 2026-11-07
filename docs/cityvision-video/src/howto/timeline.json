@@ -1,0 +1,18 @@
+{
+  "fps": 60,
+  "bpm": 114.99,
+  "musicStart": 84.018,
+  "note": "Lengths in beats. Music starts on the drop, so frame 0 is a downbeat.",
+  "scenes": [
+    ["hook", 6, "cut"],
+    ["fly", 10, "irisTimer"],
+    ["spot", 11, "whip"],
+    ["pin", 6, "zoom"],
+    ["merge", 10, "irisPin"],
+    ["blur", 8, "whip"],
+    ["approve", 6, "push"],
+    ["fix", 6, "irisApprove"],
+    ["recap", 6, "irisCheck"],
+    ["end", 8, "irisCenter"]
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "fps": 60,
+  "bpm": 114.99,
+  "musicStart": 84.018,
+  "note": "Lengths in beats; music starts on the drop. Every number on screen comes from stats.json (pipeline outputs).",
+  "scenes": [
+    ["intro", 8, "cut"],
+    ["air", 5, "push"],
+    ["frames", 6, "push"],
+    ["seen", 7, "push"],
+    ["issues", 6, "push"],
+    ["top", 5, "push"],
+    ["best", 8, "push"],
+    ["tossed", 6, "push"],
+    ["human", 5, "push"],
+    ["people", 8, "push"],
+    ["outro", 8, "push"],
+    ["end", 7, "irisCenter"]
+  ]
+}

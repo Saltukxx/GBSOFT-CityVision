@@ -1,0 +1,19 @@
+{
+  "fps": 60,
+  "bpm": 114.99,
+  "musicStart": 59.494,
+  "note": "Lengths in beats. 47 beats of letters put the drop (84.018 s) on the 'turn' scene; the track's 1-beat silence lands on the last beat of 'pile'.",
+  "scenes": [
+    ["l1", 12, "cut"],
+    ["a1", 5, "irisHole"],
+    ["l2", 10, "whip"],
+    ["a2", 5, "zoom"],
+    ["l3", 6, "whip"],
+    ["a3", 5, "zoom"],
+    ["pile", 4, "push"],
+    ["turn", 4, "cut"],
+    ["payoff", 14, "irisCenter"],
+    ["close", 6, "push"],
+    ["end", 6, "irisSign"]
+  ]
+}

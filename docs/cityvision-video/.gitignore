@@ -8,3 +8,17 @@ out
 
 # QA kontak sayfası (her çalıştırmada yeniden üretilir)
 qa
+vo/samples/
+public/eyes/stock/
+
+# Video medyası lokalde kalır (kaynak kod commit'lenir)
+public/brand/
+public/eyes/
+public/game/
+public/howto/
+public/maps/
+public/mayor/
+public/promo/
+public/wrapped/
+qa-*/
+vo/

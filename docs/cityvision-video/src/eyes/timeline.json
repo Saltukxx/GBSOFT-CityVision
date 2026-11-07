@@ -1,0 +1,16 @@
+{
+  "fps": 60,
+  "bpm": 114.99,
+  "musicStart": 67.321,
+  "note": "Lengths in beats. 32 beats before 'map' put the drop (84.018 s) on the split; the track's 1-beat silence falls on the last beat of 'tally'.",
+  "scenes": [
+    ["intro", 4, "cut"],
+    ["m1", 6, "cut"],
+    ["m2", 6, "cut"],
+    ["m3", 6, "cut"],
+    ["m4", 6, "cut"],
+    ["tally", 4, "cut"],
+    ["map", 8, "cut"],
+    ["end", 6, "irisCenter"]
+  ]
+}

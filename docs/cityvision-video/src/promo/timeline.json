@@ -1,0 +1,23 @@
+{
+  "fps": 60,
+  "bpm": 114.99,
+  "musicStart": 63.147,
+  "note": "Scene lengths are in beats. Scene starts = round(cumulative beats * 3600 / bpm). The CityVision logo (beat 40) lands on the music drop at 84.018 s.",
+  "scenes": [
+    ["map", 4, "cut"],
+    ["wrong", 4, "cut"],
+    ["says", 8, "irisO"],
+    ["where", 3, "cut"],
+    ["feed", 12, "cut"],
+    ["findout", 5, "irisBall"],
+    ["km", 4, "zoom"],
+    ["logo", 3, "irisDrop"],
+    ["every", 8, "irisPupil"],
+    ["real", 5, "irisPin"],
+    ["notify", 6, "whip"],
+    ["onetap", 5, "whip"],
+    ["morning", 7, "push"],
+    ["fewer", 8, "whip"],
+    ["end", 7, "irisLogo"]
+  ]
+}

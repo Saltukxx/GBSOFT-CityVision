@@ -1,0 +1,52 @@
+{
+ "flights": 4,
+ "flightList": [
+  {
+   "start": "17:54",
+   "seconds": 97
+  },
+  {
+   "start": "18:05",
+   "seconds": 59
+  },
+  {
+   "start": "18:11",
+   "seconds": 52
+  },
+  {
+   "start": "18:21",
+   "seconds": 156
+  }
+ ],
+ "seconds": 363,
+ "frames": 10907,
+ "sightings": 958,
+ "sightingsByClass": {
+  "road_damage": 701,
+  "pothole": 194,
+  "road_crack": 63
+ },
+ "issues": 75,
+ "issuesByClass": {
+  "road_damage": 38,
+  "pothole": 28,
+  "road_crack": 9
+ },
+ "rejected": 365,
+ "review": 12,
+ "people": 1059,
+ "best": {
+  "confidence": 0.98,
+  "run": "dji_180530",
+  "frame": 1560,
+  "class": "pothole"
+ },
+ "date": "16 Aug 2026",
+ "place": "Kartal, Istanbul",
+ "window": "17:54\u201318:24",
+ "issuesByClassReal": {
+  "road_damage": 46,
+  "pothole": 28,
+  "road_crack": 1
+ }
+}
